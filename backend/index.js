@@ -1,7 +1,12 @@
 console.log("iniciando servidor....")
 
 const express = require("express")
+const connectDB = require("./config/db")
+
 const app = express()
+
+// conectar BD
+connectDB()
 
 app.use(express.json())
 
