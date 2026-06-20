@@ -18,7 +18,7 @@ const dentroDeVentana = (reporte) => {
 // Populate reutilizable para traer vehículo, falla y usuario
 const popReporte = (query) =>
     query
-        .populate("vehiculo", "marca modelo anio tipo combustible")
+        .populate("vehiculo", "marca modelo anio tipo combustible fotos")
         .populate("falla", "nombre descripcion")
         .populate("usuario", "nombre email region provincia")
         .populate("validadoPor", "nombre email")
@@ -73,15 +73,17 @@ export const obtenerReportes = async (req, res) => {
         const pagina = parseInt(req.query.pagina) || 1
         const limite = 10
         const skip = (pagina - 1) * limite
-        const { busqueda, gravedad } = req.query
+        const { busqueda, gravedad, vehiculo } = req.query
 
         // Construir filtro dinámico
         let filtro = { activo: true, validado: true }
         if (gravedad) filtro.gravedad = gravedad
 
-        // Si hay búsqueda, necesitamos filtrar por campos del populate
-        // Primero buscamos los IDs de vehículos y fallas que coincidan
-        if (busqueda) {
+        // Filtro directo por ID de vehículo (viene desde CatalogoVehiculos)
+        if (vehiculo) filtro.vehiculo = vehiculo
+
+        // Si hay búsqueda, filtrar por campos del populate
+        if (busqueda && !vehiculo) {
             const Vehiculo = (await import("../models/Vehiculo.js")).default
             const Falla = (await import("../models/Falla.js")).default
             const regex = { $regex: busqueda, $options: "i" }
@@ -230,14 +232,12 @@ export const actualizarReporte = async (req, res) => {
             return res.status(403).json({ msg: `Solo puedes editar dentro de las primeras ${LIMITE_HORAS} horas` })
         }
 
-        // Solo se permiten cambiar estos campos
         const { descripcion, gravedad, vehiculo, falla } = req.body
         if (descripcion !== undefined) reporte.descripcion = descripcion
         if (gravedad !== undefined) reporte.gravedad = gravedad
         if (vehiculo !== undefined) reporte.vehiculo = vehiculo
         if (falla !== undefined) reporte.falla = falla
 
-        // Limpiar observación cuando el usuario edita el reporte (ya fue atendida)
         reporte.observacion = null
         reporte.observadoPor = null
         reporte.observadoEn = null
@@ -263,7 +263,6 @@ export const eliminarReporte = async (req, res) => {
         if (esDueno && !esAdmin && !dentroDeVentana(reporte)) {
             return res.status(403).json({ msg: `Solo puedes eliminar dentro de las primeras ${LIMITE_HORAS} horas` })
         }
-        // Guardar datos antes de eliminar para el correo
         const reportePoblado = await popReporte(Reporte.findById(req.params.id))
 
         reporte.activo = false
@@ -271,8 +270,6 @@ export const eliminarReporte = async (req, res) => {
         reporte.eliminadoPor = req.userBDD._id
         await reporte.save()
 
-        // Si el admin elimina el reporte de OTRO usuario, notificarle por correo
-        // Si el admin elimina su propio reporte, solo borrado sin correo
         if (esAdmin && !esDueno) {
             const motivo = req.body?.motivo || "El reporte no cumple con las normas de la plataforma."
             const usuario = await User.findById(reporte.usuario)
@@ -355,7 +352,6 @@ export const validarReporte = async (req, res) => {
         reporte.validadoPor = req.userBDD._id
         await reporte.save()
 
-        // Notificar al usuario por correo
         const usuario = await User.findById(reporte.usuario)
         if (usuario?.email) {
             const vehiculo = reporte.vehiculo
@@ -387,7 +383,6 @@ export const invalidarReporte = async (req, res) => {
         reporte.validadoPor = null
         await reporte.save()
 
-        // Notificar al usuario por correo
         const usuario = await User.findById(reporte.usuario)
         if (usuario?.email) {
             const vehiculo = reporte.vehiculo
@@ -403,15 +398,12 @@ export const invalidarReporte = async (req, res) => {
     }
 }
 
-// ESTADÍSTICAS - solo verificados, agrupando por vehículo y falla
+// ESTADÍSTICAS
 export const estadisticas = async (req, res) => {
     try {
         const filtro = { activo: true, validado: true }
-
-        // Traemos los reportes con sus referencias pobladas y agrupamos en JS
         const reportes = await popReporte(Reporte.find(filtro))
 
-        // Por marca
         const marcaMap = {}
         const modeloMap = {}
         const fallaMap = {}
@@ -447,7 +439,7 @@ export const estadisticas = async (req, res) => {
     }
 }
 
-// DEVOLVER REPORTE AL USUARIO (admin) - queda pendiente con observación
+// DEVOLVER REPORTE AL USUARIO (admin)
 export const devolverReporte = async (req, res) => {
     try {
         const { observacion } = req.body
@@ -460,13 +452,11 @@ export const devolverReporte = async (req, res) => {
             return res.status(404).json({ msg: "Reporte no encontrado o ya fue validado" })
         }
 
-        // Guardar observación
         reporte.observacion = observacion.trim()
         reporte.observadoPor = req.userBDD._id
         reporte.observadoEn = new Date()
         await reporte.save()
 
-        // Notificar al usuario por correo
         const usuario = await User.findById(reporte.usuario)
         if (usuario?.email) {
             const vehiculo = reporte.vehiculo

@@ -4,7 +4,7 @@ import Reporte from "../models/Reporte.js"
 // CREAR FALLA (cualquier usuario logueado)
 export const crearFalla = async (req, res) => {
     try {
-        let { nombre, descripcion } = req.body
+        let { nombre, descripcion, gravedad } = req.body
 
         if (!nombre) {
             return res.status(400).json({ msg: "El nombre de la falla es obligatorio" })
@@ -21,7 +21,7 @@ export const crearFalla = async (req, res) => {
             return res.status(400).json({ msg: `La falla "${nombre}" ya existe` })
         }
 
-        const falla = new Falla({ nombre, descripcion, creadoPor: req.userBDD._id })
+        const falla = new Falla({ nombre, descripcion, gravedad: gravedad || "media", creadoPor: req.userBDD._id })
         await falla.save()
 
         res.status(201).json({ msg: "Falla registrada correctamente", falla })

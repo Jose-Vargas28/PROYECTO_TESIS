@@ -226,6 +226,48 @@ export const listarUsuariosEliminados = async (req, res) => {
     }
 }
 
+// REPORTES DE UN USUARIO (admin)
+export const reportesDeUsuario = async (req, res) => {
+    try {
+        const pagina = parseInt(req.query.pagina) || 1
+        const limite = 10
+        const skip = (pagina - 1) * limite
+        const busqueda = req.query.busqueda || ""
+
+        let filtro = { usuario: req.params.id }
+
+        if (busqueda) {
+            const Vehiculo = (await import("../models/Vehiculo.js")).default
+            const Falla = (await import("../models/Falla.js")).default
+            const regex = { $regex: busqueda, $options: "i" }
+            const vehiculosMatch = await Vehiculo.find({ $or: [{ marca: regex }, { modelo: regex }] }).select("_id")
+            const fallasMatch = await Falla.find({ nombre: regex }).select("_id")
+            filtro.$or = [
+                { vehiculo: { $in: vehiculosMatch.map(v => v._id) } },
+                { falla: { $in: fallasMatch.map(f => f._id) } }
+            ]
+        }
+
+        const total = await Reporte.countDocuments(filtro)
+        const reportes = await Reporte.find(filtro)
+            .populate("vehiculo", "marca modelo anio")
+            .populate("falla", "nombre")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limite)
+
+        res.status(200).json({
+            reportes,
+            total,
+            paginas: Math.ceil(total / limite),
+            paginaActual: pagina
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al obtener reportes del usuario" })
+    }
+}
+
 // RESTAURAR USUARIO ELIMINADO (admin)
 export const restaurarUsuario = async (req, res) => {
     try {

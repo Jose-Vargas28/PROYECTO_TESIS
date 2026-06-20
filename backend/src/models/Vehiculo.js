@@ -1,5 +1,13 @@
 import { Schema, model } from "mongoose"
 
+const fotoSchema = new Schema({
+    url: { type: String, required: true },
+    publicId: { type: String, required: true },
+    principal: { type: Boolean, default: false },
+    esPexels: { type: Boolean, default: false },
+    urlOriginal: { type: String } // URL original de Pexels para restaurar en el listado
+}, { _id: true })
+
 const vehiculoSchema = new Schema({
     marca: { type: String, required: true, trim: true },
     modelo: { type: String, required: true, trim: true },
@@ -14,6 +22,8 @@ const vehiculoSchema = new Schema({
         enum: ["gasolina", "diésel", "eléctrico", "híbrido"],
         default: "gasolina"
     },
+    fotos: [fotoSchema],
+    ocultarFotoAuto: { type: Boolean, default: false },
     creadoPor: {
         type: Schema.Types.ObjectId,
         ref: "User"

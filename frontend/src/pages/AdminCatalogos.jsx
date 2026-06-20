@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback } from "react"
 import { ToastContainer, toast } from "react-toastify"
 import { tiposCombustible, tiposVehiculo, aniosVehiculo } from "../config/ecuador"
 import {
-    getVehiculos, actualizarVehiculo, eliminarVehiculo,
-    getFallas, actualizarFalla, eliminarFalla
+    getVehiculos, actualizarVehiculo, eliminarVehiculo, crearVehiculo,
+    getFallas, actualizarFalla, eliminarFalla, crearFalla
 } from "../services/catalogoService"
 import ModalConfirmar from "../components/ui/ModalConfirmar"
 import Paginacion from "../components/ui/Paginacion"
+import LogoMarca from "../components/ui/LogoMarca"
 
 const formatearFecha = (fecha) => {
     if (!fecha) return "—"
@@ -36,12 +37,17 @@ const AdminCatalogos = () => {
     const [eliminarVehiculoModal, setEliminarVehiculoModal] = useState(null)
     const [formVehiculo, setFormVehiculo] = useState({ marca: "", modelo: "", anio: "", tipo: "automóvil", combustible: "gasolina" })
     const [anioManualModal, setAnioManualModal] = useState(false)
+    const [mostrarFormCrearV, setMostrarFormCrearV] = useState(false)
+    const [formCrearV, setFormCrearV] = useState({ marca: "", modelo: "", anio: "", tipo: "automóvil", combustible: "gasolina" })
+    const [anioManualCrear, setAnioManualCrear] = useState(false)
 
     // Modales falla
     const [detalleFalla, setDetalleFalla] = useState(null)
     const [editarFalla, setEditarFalla] = useState(null)
     const [eliminarFallaModal, setEliminarFallaModal] = useState(null)
     const [formFalla, setFormFalla] = useState({ nombre: "", descripcion: "", gravedad: "media" })
+    const [mostrarFormCrearF, setMostrarFormCrearF] = useState(false)
+    const [formCrearF, setFormCrearF] = useState({ nombre: "", descripcion: "", gravedad: "media" })
 
     const inputClass = "block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
 
@@ -78,6 +84,34 @@ const AdminCatalogos = () => {
         const t = setTimeout(() => { setPaginaF(1); cargarFallas(1, busquedaF) }, 400)
         return () => clearTimeout(t)
     }, [busquedaF])
+
+    // ---- Crear vehículo ----
+    const handleCrearVehiculo = async () => {
+        if (!formCrearV.marca || !formCrearV.modelo || !formCrearV.anio) return toast.error("Completa marca, modelo y año")
+        try {
+            const res = await crearVehiculo({
+                marca: formCrearV.marca, modelo: formCrearV.modelo,
+                anio: Number(formCrearV.anio), tipo: formCrearV.tipo, combustible: formCrearV.combustible
+            })
+            toast.success(res.data.msg)
+            setMostrarFormCrearV(false)
+            setFormCrearV({ marca: "", modelo: "", anio: "", tipo: "automóvil", combustible: "gasolina" })
+            setAnioManualCrear(false)
+            cargarVehiculos(paginaV, busquedaV)
+        } catch (error) { toast.error(error?.response?.data?.msg || "Error al crear vehículo") }
+    }
+
+    // ---- Crear falla ----
+    const handleCrearFalla = async () => {
+        if (!formCrearF.nombre) return toast.error("El nombre es obligatorio")
+        try {
+            const res = await crearFalla(formCrearF)
+            toast.success(res.data.msg)
+            setMostrarFormCrearF(false)
+            setFormCrearF({ nombre: "", descripcion: "", gravedad: "media" })
+            cargarFallas(paginaF, busquedaF)
+        } catch (error) { toast.error(error?.response?.data?.msg || "Error al crear falla") }
+    }
 
     // ---- Vehículos ----
     const abrirEditarVehiculo = (v) => {
@@ -153,7 +187,49 @@ const AdminCatalogos = () => {
                 <div className="bg-white rounded-xl shadow-lg p-6">
                     <div className="flex justify-between items-center mb-3">
                         <h2 className="text-lg font-bold text-slate-700">Vehículos ({totalV})</h2>
+                        <button type="button" onClick={() => setMostrarFormCrearV(!mostrarFormCrearV)}
+                            className="text-sm text-blue-700 hover:underline font-semibold">
+                            {mostrarFormCrearV ? "Cancelar" : "+ Nuevo"}
+                        </button>
                     </div>
+
+                    {mostrarFormCrearV && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3 space-y-2">
+                            <input className={inputClass} placeholder="Marca (Ej. Toyota)" value={formCrearV.marca}
+                                onChange={(e) => setFormCrearV({ ...formCrearV, marca: e.target.value })} />
+                            <input className={inputClass} placeholder="Modelo (Ej. Corolla)" value={formCrearV.modelo}
+                                onChange={(e) => setFormCrearV({ ...formCrearV, modelo: e.target.value })} />
+                            {!anioManualCrear ? (
+                                <select className={inputClass} value={formCrearV.anio} onChange={(e) => {
+                                    if (e.target.value === "otro") { setAnioManualCrear(true); setFormCrearV({ ...formCrearV, anio: "" }) }
+                                    else setFormCrearV({ ...formCrearV, anio: e.target.value })
+                                }}>
+                                    <option value="">Seleccionar año</option>
+                                    {aniosVehiculo.map(a => <option key={a} value={a}>{a}</option>)}
+                                    <option value="otro">Otro año...</option>
+                                </select>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <input type="number" className={inputClass} placeholder="Ej. 2027" value={formCrearV.anio}
+                                        onChange={(e) => setFormCrearV({ ...formCrearV, anio: e.target.value })} min="1900" max="2100" />
+                                    <button type="button" onClick={() => { setAnioManualCrear(false); setFormCrearV({ ...formCrearV, anio: "" }) }}
+                                        className="px-3 py-2 text-sm text-slate-500 border border-slate-300 rounded-md shrink-0">← Volver</button>
+                                </div>
+                            )}
+                            <select className={inputClass} value={formCrearV.tipo}
+                                onChange={(e) => setFormCrearV({ ...formCrearV, tipo: e.target.value })}>
+                                {tiposVehiculo.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                            </select>
+                            <select className={inputClass} value={formCrearV.combustible}
+                                onChange={(e) => setFormCrearV({ ...formCrearV, combustible: e.target.value })}>
+                                {tiposCombustible.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                            </select>
+                            <button type="button" onClick={handleCrearVehiculo}
+                                className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg text-sm">
+                                Registrar vehículo
+                            </button>
+                        </div>
+                    )}
                     <input type="text" placeholder="Buscar por marca o modelo..."
                         className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm mb-3"
                         value={busquedaV} onChange={(e) => setBusquedaV(e.target.value)} />
@@ -166,17 +242,20 @@ const AdminCatalogos = () => {
                             <ul className="space-y-2">
                                 {vehiculos.map(v => (
                                     <li key={v._id} className="bg-slate-50 px-3 py-2.5 rounded-lg">
-                                        <div className="flex justify-between items-start gap-2">
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-semibold text-slate-700">{v.marca} {v.modelo} {v.anio}</p>
-                                                <div className="flex gap-1 mt-0.5 flex-wrap">
-                                                    <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">{v.tipo || "automóvil"}</span>
-                                                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">{v.combustible || "gasolina"}</span>
-                                                    {v.totalReportes > 0 && (
-                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">{v.totalReportes} reporte(s)</span>
-                                                    )}
+                                        <div className="flex justify-between items-center gap-2">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <LogoMarca marca={v.marca} size={28} />
+                                                <div>
+                                                    <p className="text-sm font-semibold text-slate-700">{v.marca} {v.modelo} {v.anio}</p>
+                                                    <div className="flex gap-1 mt-0.5 flex-wrap">
+                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">{v.tipo || "automóvil"}</span>
+                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">{v.combustible || "gasolina"}</span>
+                                                        {v.totalReportes > 0 && (
+                                                            <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">{v.totalReportes} reporte(s)</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-slate-400 mt-0.5">{v.creadoPor?.nombre || "—"} · {formatearFecha(v.createdAt)}</p>
                                                 </div>
-                                                <p className="text-xs text-slate-400 mt-0.5">{v.creadoPor?.nombre || "—"} · {formatearFecha(v.createdAt)}</p>
                                             </div>
                                             <div className="flex gap-2 shrink-0">
                                                 <button type="button" onClick={() => setDetalleVehiculo(v)} className="text-blue-700 hover:underline text-xs font-semibold">Ver</button>
@@ -197,7 +276,30 @@ const AdminCatalogos = () => {
                 <div className="bg-white rounded-xl shadow-lg p-6">
                     <div className="flex justify-between items-center mb-3">
                         <h2 className="text-lg font-bold text-slate-700">Tipos de falla ({totalF})</h2>
+                        <button type="button" onClick={() => setMostrarFormCrearF(!mostrarFormCrearF)}
+                            className="text-sm text-blue-700 hover:underline font-semibold">
+                            {mostrarFormCrearF ? "Cancelar" : "+ Nueva"}
+                        </button>
                     </div>
+
+                    {mostrarFormCrearF && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3 space-y-2">
+                            <input className={inputClass} placeholder="Nombre de la falla (Ej. Falla de frenos)" value={formCrearF.nombre}
+                                onChange={(e) => setFormCrearF({ ...formCrearF, nombre: e.target.value })} />
+                            <input className={inputClass} placeholder="Descripción breve (opcional)" value={formCrearF.descripcion}
+                                onChange={(e) => setFormCrearF({ ...formCrearF, descripcion: e.target.value })} />
+                            <select className={inputClass} value={formCrearF.gravedad}
+                                onChange={(e) => setFormCrearF({ ...formCrearF, gravedad: e.target.value })}>
+                                <option value="baja">Baja (no afecta el funcionamiento)</option>
+                                <option value="media">Media (funciona con fallas)</option>
+                                <option value="alta">Alta (riesgo o falla grave)</option>
+                            </select>
+                            <button type="button" onClick={handleCrearFalla}
+                                className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg text-sm">
+                                Registrar falla
+                            </button>
+                        </div>
+                    )}
                     <input type="text" placeholder="Buscar por nombre de falla..."
                         className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm mb-3"
                         value={busquedaF} onChange={(e) => setBusquedaF(e.target.value)} />
@@ -245,7 +347,10 @@ const AdminCatalogos = () => {
             {detalleVehiculo && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-                        <h3 className="text-xl font-bold text-slate-700 mb-4">Detalle del vehículo</h3>
+                        <div className="flex items-center gap-3 mb-4">
+                            <LogoMarca marca={detalleVehiculo.marca} size={40} />
+                            <h3 className="text-xl font-bold text-slate-700">Detalle del vehículo</h3>
+                        </div>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                             <div><p className="text-xs text-slate-400">Marca</p><p className="font-semibold">{detalleVehiculo.marca}</p></div>
                             <div><p className="text-xs text-slate-400">Modelo</p><p className="font-semibold">{detalleVehiculo.modelo}</p></div>

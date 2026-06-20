@@ -19,6 +19,7 @@ import DetalleReporte from "./pages/DetalleReporte"
 import EditarReporte from "./pages/EditarReporte"
 import Estadisticas from "./pages/Estadisticas"
 import Perfil from "./pages/Perfil"
+import CatalogoVehiculos from "./pages/CatalogoVehiculos"
 
 // Páginas admin
 import AdminPendientes from "./pages/AdminPendientes"
@@ -62,6 +63,7 @@ function App() {
                     <Route path="editar/:id" element={<EditarReporte />} />
                     <Route path="estadisticas" element={<Estadisticas />} />
                     <Route path="perfil" element={<Perfil />} />
+                    <Route path="vehiculos" element={<CatalogoVehiculos />} />
 
                     {/* Solo admin */}
                     <Route

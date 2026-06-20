@@ -1,13 +1,16 @@
 import { useEffect, useState, useCallback } from "react"
+import { useNavigate } from "react-router"
 import { ToastContainer, toast } from "react-toastify"
 import axios from "axios"
 import storeAuth from "../context/storeAuth"
 import ModalConfirmar from "../components/ui/ModalConfirmar"
 import Paginacion from "../components/ui/Paginacion"
+import Badge from "../components/ui/Badge"
 import { regionesEcuador, provinciasPorRegion } from "../config/ecuador"
 
 const AdminUsuarios = () => {
     const { token } = storeAuth()
+    const navigate = useNavigate()
     const [pestana, setPestana] = useState("activos")
     const [modoGestion, setModoGestion] = useState(false)
     const [usuarioDetalle, setUsuarioDetalle] = useState(null)
@@ -34,6 +37,15 @@ const AdminUsuarios = () => {
     const [totalEliminados, setTotalEliminados] = useState(0)
 
     const [modalAccion, setModalAccion] = useState(null)
+
+    // Modal reportes del usuario
+    const [modalReportes, setModalReportes] = useState(null)
+    const [reportesUsuario, setReportesUsuario] = useState([])
+    const [cargandoReportes, setCargandoReportes] = useState(false)
+    const [busquedaReportes, setBusquedaReportes] = useState("")
+    const [paginaReportes, setPaginaReportes] = useState(1)
+    const [totalPaginasReportes, setTotalPaginasReportes] = useState(1)
+    const [totalReportes, setTotalReportes] = useState(0)
 
     const authHeaders = () => ({ headers: { Authorization: `Bearer ${token}` } })
 
@@ -68,10 +80,25 @@ const AdminUsuarios = () => {
         setCargandoEliminados(false)
     }, [token])
 
+    const cargarReportesUsuario = useCallback(async (usuarioId, pag = 1, busq = "") => {
+        setCargandoReportes(true)
+        try {
+            const params = new URLSearchParams({ pagina: pag })
+            if (busq) params.append("busqueda", busq)
+            const res = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/usuarios/${usuarioId}/reportes?${params}`,
+                authHeaders()
+            )
+            setReportesUsuario(res.data.reportes || [])
+            setTotalPaginasReportes(res.data.paginas || 1)
+            setTotalReportes(res.data.total || 0)
+        } catch (error) { console.error(error); setReportesUsuario([]) }
+        setCargandoReportes(false)
+    }, [token])
+
     useEffect(() => { cargarActivos() }, [])
     useEffect(() => { if (pestana === "eliminados") cargarEliminados() }, [pestana])
 
-    // Búsqueda y filtros con debounce
     useEffect(() => {
         const t = setTimeout(() => {
             setPaginaActivos(1)
@@ -84,6 +111,22 @@ const AdminUsuarios = () => {
         const t = setTimeout(() => { setPaginaEliminados(1); cargarEliminados(1, busquedaEliminados) }, 400)
         return () => clearTimeout(t)
     }, [busquedaEliminados])
+
+    useEffect(() => {
+        if (!modalReportes) return
+        const t = setTimeout(() => {
+            setPaginaReportes(1)
+            cargarReportesUsuario(modalReportes._id, 1, busquedaReportes)
+        }, 400)
+        return () => clearTimeout(t)
+    }, [busquedaReportes])
+
+    const abrirModalReportes = (usuario) => {
+        setModalReportes(usuario)
+        setBusquedaReportes("")
+        setPaginaReportes(1)
+        cargarReportesUsuario(usuario._id, 1, "")
+    }
 
     const limpiarFiltros = () => {
         setBusqueda(""); setFiltroRegion(""); setFiltroProvincia("")
@@ -115,6 +158,12 @@ const AdminUsuarios = () => {
         desbanear: { titulo: "¿Reactivar usuario?", descripcion: `¿Reactivar a ${modalAccion?.usuario?.nombre}?`, textoConfirmar: "Sí, reactivar", color: "bg-green-600 hover:bg-green-700" },
         eliminar: { titulo: "¿Eliminar usuario?", descripcion: `¿Eliminar a ${modalAccion?.usuario?.nombre}? Sus reportes no serán eliminados.`, textoConfirmar: "Sí, eliminar", color: "bg-red-600 hover:bg-red-700" },
         restaurar: { titulo: "¿Restaurar usuario?", descripcion: `¿Restaurar la cuenta de ${modalAccion?.usuario?.nombre}?`, textoConfirmar: "Sí, restaurar", color: "bg-blue-900 hover:bg-blue-800" }
+    }
+
+    const estadoReporte = (r) => {
+        if (!r.activo) return { label: "Eliminado", clase: "bg-red-100 text-red-700" }
+        if (r.validado) return { label: "Validado", clase: "bg-green-100 text-green-700" }
+        return { label: "Pendiente", clase: "bg-amber-100 text-amber-800" }
     }
 
     const formatearFecha = (f) => f ? new Date(f).toLocaleDateString("es-EC") : "—"
@@ -173,7 +222,6 @@ const AdminUsuarios = () => {
                         </div>
                     )}
 
-                    {/* Filtros */}
                     <div className="bg-white rounded-xl shadow p-4 mb-4">
                         <p className="text-sm font-semibold text-slate-600 mb-3">Filtros de búsqueda</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -195,8 +243,7 @@ const AdminUsuarios = () => {
                                 value={filtroMaxReportes} onChange={(e) => setFiltroMaxReportes(e.target.value)} />
                         </div>
                         {hayFiltros && (
-                            <button type="button" onClick={limpiarFiltros}
-                                className="mt-3 text-sm text-slate-500 hover:underline">
+                            <button type="button" onClick={limpiarFiltros} className="mt-3 text-sm text-slate-500 hover:underline">
                                 Limpiar filtros
                             </button>
                         )}
@@ -237,8 +284,13 @@ const AdminUsuarios = () => {
                                                         </div>
                                                     ) : <span className="text-slate-300 italic text-xs">No registrada</span>}
                                                 </td>
-                                                <td className="p-3 text-center font-bold text-slate-700">{u.totalReportes}</td>
-                                                <td className="p-3">
+                                                <td className="p-3 text-center">
+                                                    <button type="button" onClick={() => abrirModalReportes(u)}
+                                                        className="font-bold text-blue-900 hover:underline">
+                                                        {u.totalReportes}
+                                                    </button>
+                                                </td>
+                                                <td className="p-3 text-center">
                                                     <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${u.baneado ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}`}>
                                                         {u.baneado ? "Suspendido" : "Activo"}
                                                     </span>
@@ -257,10 +309,16 @@ const AdminUsuarios = () => {
                                                                 className="bg-red-100 hover:bg-red-200 text-red-800 text-xs font-semibold px-3 py-1 rounded-lg">Eliminar</button>
                                                         </div>
                                                     ) : (
-                                                        <button type="button" onClick={() => setUsuarioDetalle(usuarioDetalle?._id === u._id ? null : u)}
-                                                            className="text-blue-700 hover:underline text-xs">
-                                                            {usuarioDetalle?._id === u._id ? "Ocultar" : "Ver datos"}
-                                                        </button>
+                                                        <div className="flex gap-2">
+                                                            <button type="button" onClick={() => setUsuarioDetalle(usuarioDetalle?._id === u._id ? null : u)}
+                                                                className="text-blue-700 hover:underline text-xs">
+                                                                {usuarioDetalle?._id === u._id ? "Ocultar" : "Ver datos"}
+                                                            </button>
+                                                            <button type="button" onClick={() => abrirModalReportes(u)}
+                                                                className="text-slate-500 hover:underline text-xs">
+                                                                Ver reportes
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </td>
                                             </tr>
@@ -277,45 +335,24 @@ const AdminUsuarios = () => {
                                         <button type="button" onClick={() => setUsuarioDetalle(null)} className="text-slate-400 hover:text-slate-600 text-sm">Cerrar ×</button>
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                        <div>
-                                            <p className="text-slate-400 text-xs">Nombre</p>
-                                            <p className="font-semibold text-slate-700">{usuarioDetalle.nombre}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-400 text-xs">Correo</p>
-                                            <p className="font-semibold text-slate-700">{usuarioDetalle.email}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-400 text-xs">Teléfono</p>
-                                            <p className="font-semibold text-slate-700">{usuarioDetalle.telefono || <span className="text-slate-400 italic font-normal">No registrado</span>}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-400 text-xs">Región</p>
-                                            <p className="font-semibold text-slate-700">{usuarioDetalle.region || <span className="text-slate-400 italic font-normal">No registrada</span>}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-400 text-xs">Provincia</p>
-                                            <p className="font-semibold text-slate-700">{usuarioDetalle.provincia || <span className="text-slate-400 italic font-normal">No registrada</span>}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-400 text-xs">Registro</p>
-                                            <p className="font-semibold text-slate-700">{formatearFecha(usuarioDetalle.createdAt)}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-400 text-xs">Total reportes</p>
-                                            <p className="font-bold text-blue-900 text-lg">{usuarioDetalle.totalReportes}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-400 text-xs">Reportes validados</p>
-                                            <p className="font-bold text-green-600 text-lg">{usuarioDetalle.reportesVerificados}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-400 text-xs">Estado</p>
+                                        <div><p className="text-slate-400 text-xs">Nombre</p><p className="font-semibold text-slate-700">{usuarioDetalle.nombre}</p></div>
+                                        <div><p className="text-slate-400 text-xs">Correo</p><p className="font-semibold text-slate-700">{usuarioDetalle.email}</p></div>
+                                        <div><p className="text-slate-400 text-xs">Teléfono</p><p className="font-semibold text-slate-700">{usuarioDetalle.telefono || <span className="text-slate-400 italic font-normal">No registrado</span>}</p></div>
+                                        <div><p className="text-slate-400 text-xs">Región</p><p className="font-semibold text-slate-700">{usuarioDetalle.region || <span className="text-slate-400 italic font-normal">No registrada</span>}</p></div>
+                                        <div><p className="text-slate-400 text-xs">Provincia</p><p className="font-semibold text-slate-700">{usuarioDetalle.provincia || <span className="text-slate-400 italic font-normal">No registrada</span>}</p></div>
+                                        <div><p className="text-slate-400 text-xs">Registro</p><p className="font-semibold text-slate-700">{formatearFecha(usuarioDetalle.createdAt)}</p></div>
+                                        <div><p className="text-slate-400 text-xs">Total reportes</p><p className="font-bold text-blue-900 text-lg">{usuarioDetalle.totalReportes}</p></div>
+                                        <div><p className="text-slate-400 text-xs">Reportes validados</p><p className="font-bold text-green-600 text-lg">{usuarioDetalle.reportesVerificados}</p></div>
+                                        <div><p className="text-slate-400 text-xs">Estado</p>
                                             <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${usuarioDetalle.baneado ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}`}>
                                                 {usuarioDetalle.baneado ? "Suspendido" : "Activo"}
                                             </span>
                                         </div>
                                     </div>
+                                    <button type="button" onClick={() => abrirModalReportes(usuarioDetalle)}
+                                        className="mt-4 bg-blue-900 hover:bg-blue-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                                        📋 Ver reportes de {usuarioDetalle.nombre}
+                                    </button>
                                 </div>
                             )}
 
@@ -356,8 +393,8 @@ const AdminUsuarios = () => {
                                             <tr key={u._id} className={i % 2 === 0 ? "bg-white" : "bg-slate-50"}>
                                                 <td className="p-3 font-semibold text-slate-700 text-center">{u.nombre}</td>
                                                 <td className="p-3 text-sm text-slate-500 text-center">{u.email}</td>
-                                                <td className="p-3 text-sm text-slate-400">{formatearFecha(u.eliminadoEn)}</td>
-                                                <td className="p-3">
+                                                <td className="p-3 text-sm text-slate-400 text-center">{formatearFecha(u.eliminadoEn)}</td>
+                                                <td className="p-3 text-center">
                                                     <button type="button" onClick={() => setModalAccion({ usuario: u, accion: "restaurar" })}
                                                         className="bg-blue-100 hover:bg-blue-200 text-blue-900 text-xs font-semibold px-3 py-1 rounded-lg">
                                                         Restaurar
@@ -373,6 +410,77 @@ const AdminUsuarios = () => {
                         </>
                     )}
                 </>
+            )}
+
+            {/* MODAL REPORTES DEL USUARIO */}
+            {modalReportes && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-5 border-b border-slate-200 shrink-0">
+                            <div>
+                                <h3 className="font-bold text-slate-800 text-lg">Reportes de {modalReportes.nombre}</h3>
+                                <p className="text-xs text-slate-400 mt-0.5">{modalReportes.email} · {totalReportes} reporte(s) en total</p>
+                            </div>
+                            <button type="button" onClick={() => setModalReportes(null)}
+                                className="text-slate-400 hover:text-slate-600 text-xl font-bold">×</button>
+                        </div>
+
+                        {/* Buscador */}
+                        <div className="px-5 pt-4 shrink-0">
+                            <input type="text" placeholder="Buscar por marca, modelo o falla..."
+                                className="w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm"
+                                value={busquedaReportes} onChange={(e) => setBusquedaReportes(e.target.value)} />
+                        </div>
+
+                        {/* Lista de reportes */}
+                        <div className="flex-1 overflow-y-auto p-5 space-y-2">
+                            {cargandoReportes ? (
+                                <p className="text-slate-400 text-sm text-center py-8">Cargando reportes...</p>
+                            ) : reportesUsuario.length === 0 ? (
+                                <div className="bg-slate-50 rounded-lg p-8 text-center text-slate-400 text-sm">
+                                    {busquedaReportes ? "No hay reportes que coincidan." : "Este usuario no tiene reportes."}
+                                </div>
+                            ) : (
+                                reportesUsuario.map(r => {
+                                    const estado = estadoReporte(r)
+                                    return (
+                                        <div key={r._id} className="bg-slate-50 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                    <span className="font-semibold text-slate-800 text-sm">
+                                                        {r.vehiculo?.marca} {r.vehiculo?.modelo} {r.vehiculo?.anio}
+                                                    </span>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${estado.clase}`}>
+                                                        {estado.label}
+                                                    </span>
+                                                    <Badge tipo={r.gravedad} />
+                                                </div>
+                                                <p className="text-xs text-slate-500">{r.falla?.nombre}</p>
+                                                <p className="text-xs text-slate-400 mt-0.5">
+                                                    {new Date(r.createdAt).toLocaleDateString("es-EC", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                                                </p>
+                                            </div>
+                                            <button type="button"
+                                                onClick={() => { setModalReportes(null); navigate(`/dashboard/reporte/${r._id}`) }}
+                                                className="shrink-0 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                                Ver
+                                            </button>
+                                        </div>
+                                    )
+                                })
+                            )}
+                        </div>
+
+                        {/* Paginación */}
+                        {totalPaginasReportes > 1 && (
+                            <div className="shrink-0 border-t border-slate-200 px-5 py-3">
+                                <Paginacion paginaActual={paginaReportes} totalPaginas={totalPaginasReportes}
+                                    onCambiar={(p) => { setPaginaReportes(p); cargarReportesUsuario(modalReportes._id, p, busquedaReportes) }} />
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
 
             {modalAccion && configModal[modalAccion.accion] && (

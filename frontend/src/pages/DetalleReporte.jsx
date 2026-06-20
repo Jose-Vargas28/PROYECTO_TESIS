@@ -5,6 +5,7 @@ import { getReporteDetalle, validarReporte, invalidarReporte, devolverReporte } 
 import { getYoutubeEmbedUrl } from "../helpers/youtube"
 import Badge from "../components/ui/Badge"
 import ModalMotivo from "../components/ui/ModalMotivo"
+import LogoMarca from "../components/ui/LogoMarca"
 import storeProfile from "../context/storeProfile"
 import storeAuth from "../context/storeAuth"
 
@@ -25,18 +26,17 @@ const DetalleReporte = () => {
     const [modalDevolver, setModalDevolver] = useState(false)
     const { rol } = storeAuth()
 
-    useEffect(() => {
-        const cargar = async () => {
-            try {
-                const res = await getReporteDetalle(id)
-                setReporte(res.data)
-            } catch (error) {
-                console.error(error)
-            }
-            setCargando(false)
+    const cargar = async () => {
+        try {
+            const res = await getReporteDetalle(id)
+            setReporte(res.data)
+        } catch (error) {
+            console.error(error)
         }
-        cargar()
-    }, [id])
+        setCargando(false)
+    }
+
+    useEffect(() => { cargar() }, [id])
 
     const handleValidar = async () => {
         try {
@@ -84,11 +84,15 @@ const DetalleReporte = () => {
 
             {/* Datos principales */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+
                 <div className="flex justify-between items-start flex-wrap gap-2">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800">
-                            {reporte.vehiculo?.marca} {reporte.vehiculo?.modelo}
-                        </h1>
+                        <div className="flex items-center gap-3 mb-1">
+                            <LogoMarca marca={reporte.vehiculo?.marca} size={70} />
+                            <h1 className="text-3xl font-bold text-slate-800">
+                                {reporte.vehiculo?.marca} {reporte.vehiculo?.modelo}
+                            </h1>
+                        </div>
                         <p className="text-slate-500">Año {reporte.vehiculo?.anio}</p>
                         <div className="flex gap-2 mt-2 flex-wrap">
                             {reporte.vehiculo?.tipo && (
@@ -209,12 +213,8 @@ const DetalleReporte = () => {
                             return embed ? (
                                 <div key={e._id}>
                                     <div className="aspect-video">
-                                        <iframe
-                                            src={embed}
-                                            title={e.titulo || "Video"}
-                                            className="w-full h-full rounded-lg"
-                                            allowFullScreen
-                                        ></iframe>
+                                        <iframe src={embed} title={e.titulo || "Video"}
+                                            className="w-full h-full rounded-lg" allowFullScreen />
                                     </div>
                                     {e.titulo && <p className="text-sm text-slate-500 mt-2">{e.titulo}</p>}
                                 </div>
@@ -239,7 +239,8 @@ const DetalleReporte = () => {
                     </ul>
                 </div>
             )}
-        {modalDevolver && (
+
+            {modalDevolver && (
                 <ModalMotivo
                     titulo="↩️ Devolver reporte al usuario"
                     descripcion="Escribe qué debe corregir el usuario. Recibirá esta observación por correo y podrá editar su reporte."
@@ -248,7 +249,7 @@ const DetalleReporte = () => {
                     onCancelar={() => setModalDevolver(false)}
                 />
             )}
-        {modalInvalidar && (
+            {modalInvalidar && (
                 <ModalMotivo
                     titulo="Retirar validación"
                     descripcion="El usuario recibirá un correo explicando el motivo."

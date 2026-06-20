@@ -8,7 +8,8 @@ import {
     actualizarPerfil,
     cambiarPassword,
     listarUsuariosEliminados,
-    restaurarUsuario
+    restaurarUsuario,
+    reportesDeUsuario
 } from "../controllers/usuarioController.js"
 import { verificarTokenJWT, soloAdmin } from "../middlewares/JWT.js"
 
@@ -26,5 +27,6 @@ router.patch("/usuarios/:id/desbanear", verificarTokenJWT, soloAdmin, desbanearU
 router.delete("/usuarios/:id", verificarTokenJWT, soloAdmin, eliminarUsuario)
 router.get("/usuarios/eliminados", verificarTokenJWT, soloAdmin, listarUsuariosEliminados)
 router.patch("/usuarios/:id/restaurar", verificarTokenJWT, soloAdmin, restaurarUsuario)
+router.get("/usuarios/:id/reportes", verificarTokenJWT, soloAdmin, reportesDeUsuario)
 
 export default router

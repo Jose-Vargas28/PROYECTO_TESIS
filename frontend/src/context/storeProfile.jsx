@@ -4,6 +4,7 @@ import axios from "axios"
 
 //  Trae los datos del usuario logueado desde el backend.
 
+
 const getAuthHeaders = () => {
     const storedUser = JSON.parse(localStorage.getItem("auth-token"))
     return {

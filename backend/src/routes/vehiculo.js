@@ -1,12 +1,24 @@
 import { Router } from "express"
-import { crearVehiculo, listarVehiculos, eliminarVehiculo, actualizarVehiculo } from "../controllers/vehiculoController.js"
+import {
+    crearVehiculo, listarVehiculos, eliminarVehiculo, actualizarVehiculo,
+    subirFotoVehiculo, eliminarFotoVehiculo, marcarFotoPrincipal,
+    toggleFotoAuto, guardarFotoPexels, reordenarFotos
+} from "../controllers/vehiculoController.js"
 import { verificarTokenJWT, soloAdmin } from "../middlewares/JWT.js"
 
 const router = Router()
 
-router.get("/vehiculos", listarVehiculos)                                  // público (para combo box)
-router.post("/vehiculos", verificarTokenJWT, crearVehiculo)                // usuario logueado
-router.put("/vehiculos/:id", verificarTokenJWT, soloAdmin, actualizarVehiculo)
-router.delete("/vehiculos/:id", verificarTokenJWT, soloAdmin, eliminarVehiculo)  // solo admin
+router.get("/vehiculos", listarVehiculos)                                               // público
+router.post("/vehiculos", verificarTokenJWT, crearVehiculo)                            // usuario logueado
+router.put("/vehiculos/:id", verificarTokenJWT, soloAdmin, actualizarVehiculo)         // solo admin
+router.delete("/vehiculos/:id", verificarTokenJWT, soloAdmin, eliminarVehiculo)        // solo admin
+
+// Fotos (solo admin)
+router.post("/vehiculos/:id/fotos", verificarTokenJWT, soloAdmin, subirFotoVehiculo)
+router.post("/vehiculos/:id/fotos/pexels", verificarTokenJWT, soloAdmin, guardarFotoPexels)
+router.patch("/vehiculos/:id/fotos/reordenar", verificarTokenJWT, soloAdmin, reordenarFotos)
+router.delete("/vehiculos/:id/fotos/:fotoId", verificarTokenJWT, soloAdmin, eliminarFotoVehiculo)
+router.patch("/vehiculos/:id/fotos/:fotoId/principal", verificarTokenJWT, soloAdmin, marcarFotoPrincipal)
+router.patch("/vehiculos/:id/foto-auto", verificarTokenJWT, soloAdmin, toggleFotoAuto)
 
 export default router

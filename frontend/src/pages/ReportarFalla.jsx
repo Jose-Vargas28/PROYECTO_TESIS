@@ -339,6 +339,11 @@ const ReportarFalla = () => {
                             <option value="media">Media (funciona con fallas)</option>
                             <option value="alta">Alta (riesgo o falla grave)</option>
                         </select>
+                        {fallaId && (
+                            <p className="text-xs text-slate-400 mt-1">
+                                💡 Sugerida por el tipo de falla. Puedes ajustarla según tu caso.
+                            </p>
+                        )}
                     </div>
 
                     {/* Descripción */}

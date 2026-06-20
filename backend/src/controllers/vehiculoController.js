@@ -1,7 +1,10 @@
 import Vehiculo from "../models/Vehiculo.js"
 import Reporte from "../models/Reporte.js"
+import cloudinary from "../config/cloudinary.js"
+import fs from "fs-extra"
 
 const LIMITE_DIARIO = 5
+const MAX_FOTOS = 5
 
 // CREAR VEHÍCULO (cualquier usuario logueado)
 export const crearVehiculo = async (req, res) => {
@@ -51,7 +54,6 @@ export const crearVehiculo = async (req, res) => {
         res.status(201).json({ msg: "Vehículo registrado correctamente", vehiculo })
 
     } catch (error) {
-        // Error de índice único duplicado
         if (error.code === 11000) {
             return res.status(400).json({ msg: "Ese vehículo ya existe" })
         }
@@ -102,7 +104,6 @@ export const listarVehiculos = async (req, res) => {
 // ELIMINAR VEHÍCULO (solo admin)
 export const eliminarVehiculo = async (req, res) => {
     try {
-        // Verificar si hay reportes asociados a este vehículo
         const totalReportes = await Reporte.countDocuments({
             vehiculo: req.params.id,
             activo: true
@@ -114,6 +115,12 @@ export const eliminarVehiculo = async (req, res) => {
             })
         }
 
+        // Eliminar fotos de Cloudinary antes de borrar el vehículo
+        const vehiculo = await Vehiculo.findById(req.params.id)
+        if (vehiculo?.fotos?.length > 0) {
+            await Promise.all(vehiculo.fotos.map(f => cloudinary.uploader.destroy(f.publicId)))
+        }
+
         await Vehiculo.findByIdAndDelete(req.params.id)
         res.status(200).json({ msg: "Vehículo eliminado correctamente" })
     } catch (error) {
@@ -121,7 +128,7 @@ export const eliminarVehiculo = async (req, res) => {
     }
 }
 
-// ACTUALIZAR VEHÍCULO
+// ACTUALIZAR VEHÍCULO (solo admin)
 export const actualizarVehiculo = async (req, res) => {
     try {
         let { marca, modelo, anio } = req.body
@@ -132,7 +139,6 @@ export const actualizarVehiculo = async (req, res) => {
         modelo = modelo.trim()
         anio = Number(anio)
 
-        // Verificar que no exista otro vehículo con los mismos datos (excluyendo el actual)
         const existe = await Vehiculo.findOne({
             _id: { $ne: req.params.id },
             marca: { $regex: `^${marca}$`, $options: "i" },
@@ -153,5 +159,172 @@ export const actualizarVehiculo = async (req, res) => {
             return res.status(400).json({ msg: "Ese vehículo ya existe" })
         }
         res.status(500).json({ msg: "Error al actualizar el vehículo" })
+    }
+}
+
+// SUBIR FOTO DE VEHÍCULO (solo admin)
+export const subirFotoVehiculo = async (req, res) => {
+    try {
+        const vehiculo = await Vehiculo.findById(req.params.id)
+        if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
+
+        if (!req.files?.foto) return res.status(400).json({ msg: "No se envió ninguna imagen" })
+
+        if (vehiculo.fotos.length >= MAX_FOTOS) {
+            return res.status(400).json({ msg: `Solo se permiten hasta ${MAX_FOTOS} fotos por vehículo` })
+        }
+
+        const archivo = req.files.foto
+        const resultado = await cloudinary.uploader.upload(archivo.tempFilePath, {
+            folder: "autoreporta/vehiculos",
+            transformation: [{ width: 800, height: 500, crop: "fill", quality: "auto" }]
+        })
+        await fs.unlink(archivo.tempFilePath)
+
+        // La primera foto que se sube es la principal automáticamente
+        const esPrincipal = vehiculo.fotos.length === 0
+
+        vehiculo.fotos.push({
+            url: resultado.secure_url,
+            publicId: resultado.public_id,
+            principal: esPrincipal
+        })
+        await vehiculo.save()
+
+        res.status(200).json({ msg: "Foto subida correctamente", fotos: vehiculo.fotos })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al subir la foto" })
+    }
+}
+
+// ELIMINAR FOTO DE VEHÍCULO (solo admin)
+export const eliminarFotoVehiculo = async (req, res) => {
+    try {
+        const vehiculo = await Vehiculo.findById(req.params.id)
+        if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
+
+        const foto = vehiculo.fotos.id(req.params.fotoId)
+        if (!foto) return res.status(404).json({ msg: "Foto no encontrada" })
+
+        const eraPrincipal = foto.principal
+
+        await cloudinary.uploader.destroy(foto.publicId)
+        vehiculo.fotos.pull(req.params.fotoId)
+
+        // Si se eliminó la principal y quedan fotos, la primera pasa a ser principal
+        if (eraPrincipal && vehiculo.fotos.length > 0) {
+            vehiculo.fotos[0].principal = true
+        }
+
+        await vehiculo.save()
+        res.status(200).json({ msg: "Foto eliminada correctamente", fotos: vehiculo.fotos })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al eliminar la foto" })
+    }
+}
+
+// REORDENAR FOTOS (solo admin)
+export const reordenarFotos = async (req, res) => {
+    try {
+        const vehiculo = await Vehiculo.findById(req.params.id)
+        if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
+
+        const { orden } = req.body
+        if (!Array.isArray(orden)) return res.status(400).json({ msg: "Orden inválido" })
+
+        const fotosOrdenadas = orden
+            .map(id => vehiculo.fotos.id(id))
+            .filter(Boolean)
+
+        // La primera siempre es la principal
+        fotosOrdenadas.forEach((f, i) => { f.principal = i === 0 })
+
+        vehiculo.fotos = fotosOrdenadas
+        await vehiculo.save()
+
+        res.status(200).json({ msg: "Fotos reordenadas", fotos: vehiculo.fotos })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al reordenar fotos" })
+    }
+}
+
+// GUARDAR FOTO DE PEXELS como foto manual (solo admin)
+export const guardarFotoPexels = async (req, res) => {
+    try {
+        const vehiculo = await Vehiculo.findById(req.params.id)
+        if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
+
+        if (vehiculo.fotos.length >= MAX_FOTOS) {
+            return res.status(400).json({ msg: `Solo se permiten hasta ${MAX_FOTOS} fotos por vehículo` })
+        }
+
+        const { url } = req.body
+        if (!url) return res.status(400).json({ msg: "URL de la foto requerida" })
+
+        // Cloudinary acepta URLs directamente — no hay que descargar el archivo
+        const resultado = await cloudinary.uploader.upload(url, {
+            folder: "autoreporta/vehiculos",
+            transformation: [{ width: 800, height: 500, crop: "fill", quality: "auto" }]
+        })
+
+        const esPrincipal = vehiculo.fotos.length === 0
+        vehiculo.fotos.push({
+            url: resultado.secure_url,
+            publicId: resultado.public_id,
+            principal: esPrincipal,
+            esPexels: true,
+            urlOriginal: url
+        })
+        await vehiculo.save()
+
+        res.status(200).json({ msg: "Foto guardada correctamente", fotos: vehiculo.fotos })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al guardar la foto" })
+    }
+}
+
+// OCULTAR / MOSTRAR FOTO AUTOMÁTICA (solo admin)
+export const toggleFotoAuto = async (req, res) => {
+    try {
+        const vehiculo = await Vehiculo.findById(req.params.id)
+        if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
+
+        vehiculo.ocultarFotoAuto = !vehiculo.ocultarFotoAuto
+        await vehiculo.save()
+
+        res.status(200).json({
+            msg: vehiculo.ocultarFotoAuto
+                ? "Foto automática ocultada"
+                : "Foto automática activada",
+            ocultarFotoAuto: vehiculo.ocultarFotoAuto
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al actualizar" })
+    }
+}
+
+// MARCAR FOTO COMO PRINCIPAL (solo admin)
+export const marcarFotoPrincipal = async (req, res) => {
+    try {
+        const vehiculo = await Vehiculo.findById(req.params.id)
+        if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
+
+        const foto = vehiculo.fotos.id(req.params.fotoId)
+        if (!foto) return res.status(404).json({ msg: "Foto no encontrada" })
+
+        // Quitar principal de todas y asignar a la seleccionada
+        vehiculo.fotos.forEach(f => { f.principal = false })
+        foto.principal = true
+
+        await vehiculo.save()
+        res.status(200).json({ msg: "Foto principal actualizada", fotos: vehiculo.fotos })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al actualizar la foto principal" })
     }
 }

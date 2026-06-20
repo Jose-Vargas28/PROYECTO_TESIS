@@ -1,6 +1,5 @@
 import axios from "axios"
 
-
 //  SERVICIO DE REPORTES
 //  Centraliza las llamadas a los endpoints de reportes.
 

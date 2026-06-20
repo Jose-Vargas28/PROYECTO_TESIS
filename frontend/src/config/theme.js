@@ -1,5 +1,8 @@
-
+// =============================================================
 //  CONFIGURACIÓN CENTRAL DEL SISTEMA
+//  Cambia aquí los datos de marca, colores y textos.
+//  Todo el sistema lee desde este archivo.
+// =============================================================
 
 export const theme = {
     // ---- Identidad del sistema ----

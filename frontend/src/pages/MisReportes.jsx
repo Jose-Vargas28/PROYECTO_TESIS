@@ -7,6 +7,7 @@ import Badge from "../components/ui/Badge"
 import Paginacion from "../components/ui/Paginacion"
 import ModalConfirmar from "../components/ui/ModalConfirmar"
 import useFetch from "../hooks/useFetch"
+import LogoMarca from "../components/ui/LogoMarca"
 
 const formatearFecha = (fecha) => {
     if (!fecha) return "—"
@@ -86,44 +87,44 @@ const MisReportes = () => {
                     <div className="space-y-3">
                         {reportes.map((r) => (
                             <div key={r._id} className="bg-white rounded-xl shadow p-4">
-                                <div className="flex justify-between items-start gap-4 flex-wrap">
+                                <div className="flex justify-between items-center gap-4 flex-wrap">
                                     {/* Info principal */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                                            <span className="font-bold text-slate-800">
-                                                {r.vehiculo?.marca} {r.vehiculo?.modelo} {r.vehiculo?.anio}
-                                            </span>
-                                            <Badge tipo={r.estado} />
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <LogoMarca marca={r.vehiculo?.marca} size={48} />
+                                        <div>
+                                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                <span className="font-bold text-slate-800">
+                                                    {r.vehiculo?.marca} {r.vehiculo?.modelo} {r.vehiculo?.anio}
+                                                </span>
+                                                <Badge tipo={r.estado} />
+                                            </div>
+                                            <p className="text-sm text-slate-600">{r.falla?.nombre}</p>
+                                            <p className="text-xs text-slate-400 mt-1">{formatearFecha(r.createdAt)}</p>
                                         </div>
-                                        <p className="text-sm text-slate-600">{r.falla?.nombre}</p>
-                                        <p className="text-xs text-slate-400 mt-1">{formatearFecha(r.createdAt)}</p>
                                     </div>
 
                                     {/* Acciones */}
-                                    <div className="flex flex-col gap-1.5 shrink-0">
-                                        <div className="flex gap-1.5">
-                                            <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)}
-                                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
-                                                👁 Ver
-                                            </button>
-                                            {r.puedeModificar && r.estado !== "validado" && (
+                                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                                        {r.puedeModificar && r.estado !== "validado" ? (
+                                            <>
+                                                <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)}
+                                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                                    👁 Ver
+                                                </button>
                                                 <button type="button" onClick={() => navigate(`/dashboard/editar/${r._id}`)}
                                                     className="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
                                                     ✏️ Editar
                                                 </button>
-                                            )}
-                                        </div>
-                                        {r.puedeModificar && r.estado !== "validado" && (
-                                            <button type="button" onClick={() => setModalEliminar(r)}
-                                                className="w-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors text-center">
-                                                🗑 Eliminar
+                                                <button type="button" onClick={() => setModalEliminar(r)}
+                                                    className="bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                                    🗑 Eliminar
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)}
+                                                className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                                👁 Ver detalle
                                             </button>
-                                        )}
-                                        {r.estado === "validado" && (
-                                            <span className="text-xs text-green-600 font-semibold text-center">✅ Validado</span>
-                                        )}
-                                        {!r.puedeModificar && r.estado !== "validado" && (
-                                            <span className="text-xs text-slate-400 italic text-center">Sin acciones (48h)</span>
                                         )}
                                     </div>
                                 </div>
