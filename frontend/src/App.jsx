@@ -1,0 +1,108 @@
+import { BrowserRouter, Routes, Route } from "react-router"
+
+// Páginas públicas
+import Home from "./pages/Home"
+import Login from "./pages/Login"
+import Register from "./pages/Register"
+import Confirm from "./pages/Confirm"
+import Forgot from "./pages/Forgot"
+import Reset from "./pages/Reset"
+import NotFound from "./pages/NotFound"
+
+// Layout y páginas del dashboard
+import Dashboard from "./layout/Dashboard"
+import DashboardHome from "./pages/DashboardHome"
+import ReportarFalla from "./pages/ReportarFalla"
+import VerReportes from "./pages/VerReportes"
+import MisReportes from "./pages/MisReportes"
+import DetalleReporte from "./pages/DetalleReporte"
+import EditarReporte from "./pages/EditarReporte"
+import Estadisticas from "./pages/Estadisticas"
+import Perfil from "./pages/Perfil"
+
+// Páginas admin
+import AdminPendientes from "./pages/AdminPendientes"
+import AdminEliminados from "./pages/AdminEliminados"
+import AdminCatalogos from "./pages/AdminCatalogos"
+import AdminUsuarios from "./pages/AdminUsuarios"
+
+// Rutas protegidas
+import PublicRoute from "./routes/PublicRoute"
+import ProtectedRoute from "./routes/ProtectedRoute"
+import AdminRoute from "./routes/AdminRoute"
+
+function App() {
+    return (
+        <BrowserRouter>
+            <Routes>
+                {/* Públicas (si está logueado, redirige al dashboard) */}
+                <Route element={<PublicRoute />}>
+                    <Route index element={<Home />} />
+                    <Route path="login" element={<Login />} />
+                    <Route path="register" element={<Register />} />
+                    <Route path="confirm/:token" element={<Confirm />} />
+                    <Route path="forgot" element={<Forgot />} />
+                    <Route path="reset/:token" element={<Reset />} />
+                </Route>
+
+                {/* Dashboard (requiere login) */}
+                <Route
+                    path="dashboard"
+                    element={
+                        <ProtectedRoute>
+                            <Dashboard />
+                        </ProtectedRoute>
+                    }
+                >
+                    <Route index element={<DashboardHome />} />
+                    <Route path="reportar" element={<ReportarFalla />} />
+                    <Route path="reportes" element={<VerReportes />} />
+                    <Route path="mis-reportes" element={<MisReportes />} />
+                    <Route path="reporte/:id" element={<DetalleReporte />} />
+                    <Route path="editar/:id" element={<EditarReporte />} />
+                    <Route path="estadisticas" element={<Estadisticas />} />
+                    <Route path="perfil" element={<Perfil />} />
+
+                    {/* Solo admin */}
+                    <Route
+                        path="admin/pendientes"
+                        element={
+                            <AdminRoute>
+                                <AdminPendientes />
+                            </AdminRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/eliminados"
+                        element={
+                            <AdminRoute>
+                                <AdminEliminados />
+                            </AdminRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/catalogos"
+                        element={
+                            <AdminRoute>
+                                <AdminCatalogos />
+                            </AdminRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/usuarios"
+                        element={
+                            <AdminRoute>
+                                <AdminUsuarios />
+                            </AdminRoute>
+                        }
+                    />
+                </Route>
+
+                {/* 404 */}
+                <Route path="*" element={<NotFound />} />
+            </Routes>
+        </BrowserRouter>
+    )
+}
+
+export default App

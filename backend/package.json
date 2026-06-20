@@ -1,20 +1,24 @@
 {
-  "name": "backend",
+  "name": "backend-fallas-vehiculares",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend sistema de fallas vehiculares Ecuador",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.5.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "mongoose": "^9.4.1"
+    "express-fileupload": "^1.5.1",
+    "fs-extra": "^11.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.6.3",
+    "nodemailer": "^6.9.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

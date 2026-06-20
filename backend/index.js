@@ -1,21 +1,9 @@
-console.log("iniciando servidor....")
+import app from "./server.js"
+import connectDB from "./src/config/db.js"
 
-const express = require("express")
-const connectDB = require("./config/db")
-
-const app = express()
-
-// conectar BD
 connectDB()
 
-app.use(express.json())
-
-app.get("/",(req, res) =>{
-    res.send("API funcionando")
-
-});
-
-app.listen(3000, () =>{
-    console.log("Servidor corriendo en puerto 3000")
-
+const PORT = app.get("port")
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en http://localhost:${PORT}`)
 })

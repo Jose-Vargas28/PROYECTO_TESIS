@@ -1,0 +1,63 @@
+import { Link } from "react-router"
+import storeAuth from "../context/storeAuth"
+import storeProfile from "../context/storeProfile"
+
+const DashboardHome = () => {
+    const { rol } = storeAuth()
+    const { user } = storeProfile()
+
+    const acciones = [
+        { to: "/dashboard/reportar", titulo: "Reportar una falla", desc: "Registra un nuevo problema vehicular con evidencias", color: "bg-blue-900" },
+        { to: "/dashboard/reportes", titulo: "Ver reportes", desc: "Consulta los reportes verificados de la comunidad", color: "bg-slate-700" },
+        { to: "/dashboard/mis-reportes", titulo: "Mis reportes", desc: "Gestiona los reportes que has creado", color: "bg-slate-700" },
+        { to: "/dashboard/estadisticas", titulo: "Estadísticas", desc: "Visualiza tendencias de fallas por marca y modelo", color: "bg-slate-700" },
+    ]
+
+    return (
+        <div>
+            <h1 className="text-3xl font-bold text-slate-800 mb-2">
+                Bienvenido, {user?.nombre}
+            </h1>
+            <p className="text-slate-500 mb-8">
+                Plataforma de reportes de fallas vehiculares del Ecuador
+            </p>
+
+            <div className="grid md:grid-cols-2 gap-6">
+                {acciones.map((a) => (
+                    <Link
+                        key={a.to}
+                        to={a.to}
+                        className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow border border-slate-100"
+                    >
+                        <h3 className="text-xl font-bold text-slate-700 mb-2">{a.titulo}</h3>
+                        <p className="text-slate-500 text-sm">{a.desc}</p>
+                    </Link>
+                ))}
+            </div>
+
+            {rol === "admin" && (
+                <div className="mt-8">
+                    <h2 className="text-xl font-bold text-slate-700 mb-4">Panel de administración</h2>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <Link
+                            to="/dashboard/admin/pendientes"
+                            className="bg-amber-50 border border-amber-200 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+                        >
+                            <h3 className="text-xl font-bold text-amber-800 mb-2">Validar reportes</h3>
+                            <p className="text-amber-700 text-sm">Revisa y verifica los reportes pendientes</p>
+                        </Link>
+                        <Link
+                            to="/dashboard/admin/eliminados"
+                            className="bg-red-50 border border-red-200 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+                        >
+                            <h3 className="text-xl font-bold text-red-800 mb-2">Papelera / Auditoría</h3>
+                            <p className="text-red-700 text-sm">Consulta y restaura reportes eliminados</p>
+                        </Link>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+export default DashboardHome
