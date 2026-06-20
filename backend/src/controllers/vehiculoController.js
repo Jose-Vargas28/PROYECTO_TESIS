@@ -63,8 +63,37 @@ export const crearVehiculo = async (req, res) => {
 // LISTAR TODOS LOS VEHÍCULOS
 export const listarVehiculos = async (req, res) => {
     try {
-        const vehiculos = await Vehiculo.find().sort({ marca: 1, modelo: 1, anio: -1 })
-        res.status(200).json(vehiculos)
+        const pagina = parseInt(req.query.pagina) || 1
+        const limite = 10
+        const skip = (pagina - 1) * limite
+        const busqueda = req.query.busqueda || ""
+
+        const filtro = busqueda ? {
+            $or: [
+                { marca: { $regex: busqueda, $options: "i" } },
+                { modelo: { $regex: busqueda, $options: "i" } }
+            ]
+        } : {}
+
+        const total = await Vehiculo.countDocuments(filtro)
+        const vehiculos = await Vehiculo.find(filtro)
+            .populate("creadoPor", "nombre")
+            .sort({ marca: 1, modelo: 1, anio: -1 })
+            .skip(skip)
+            .limit(limite)
+
+        const vehiculosConStats = await Promise.all(vehiculos.map(async (v) => {
+            const obj = v.toObject()
+            obj.totalReportes = await Reporte.countDocuments({ vehiculo: v._id, activo: true })
+            return obj
+        }))
+
+        res.status(200).json({
+            vehiculos: vehiculosConStats,
+            total,
+            paginas: Math.ceil(total / limite),
+            paginaActual: pagina
+        })
     } catch (error) {
         res.status(500).json({ msg: "Error al obtener vehículos" })
     }

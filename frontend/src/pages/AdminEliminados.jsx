@@ -77,22 +77,22 @@ const AdminEliminados = () => {
                         <table className="w-full">
                             <thead className="bg-slate-800 text-slate-200">
                                 <tr>
-                                    <th className="p-3 text-left">Marca</th>
-                                    <th className="p-3 text-left">Modelo</th>
-                                    <th className="p-3 text-left">Falla</th>
-                                    <th className="p-3 text-left">Eliminado por</th>
-                                    <th className="p-3 text-left">Fecha eliminación</th>
-                                    <th className="p-3 text-left">Acción</th>
+                                    <th className="p-3 text-center">Marca</th>
+                                    <th className="p-3 text-center">Modelo</th>
+                                    <th className="p-3 text-center">Falla</th>
+                                    <th className="p-3 text-center">Eliminado por</th>
+                                    <th className="p-3 text-center">Fecha eliminación</th>
+                                    <th className="p-3 text-center">Acción</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {reportes.map((r, i) => (
                                     <tr key={r._id} className={i % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                                        <td className="p-3">{r.vehiculo?.marca}</td>
-                                        <td className="p-3">{r.vehiculo?.modelo}</td>
-                                        <td className="p-3">{r.falla?.nombre}</td>
-                                        <td className="p-3 text-sm">{r.eliminadoPor?.nombre || "—"}</td>
-                                        <td className="p-3 text-sm text-slate-500">{formatearFecha(r.eliminadoEn)}</td>
+                                        <td className="p-3 text-center">{r.vehiculo?.marca}</td>
+                                        <td className="p-3 text-center">{r.vehiculo?.modelo}</td>
+                                        <td className="p-3 text-center">{r.falla?.nombre}</td>
+                                        <td className="p-3 text-sm text-center">{r.eliminadoPor?.nombre || "—"}</td>
+                                        <td className="p-3 text-sm text-slate-500 text-center">{formatearFecha(r.eliminadoEn)}</td>
                                         <td className="p-3">
                                             <button type="button" onClick={() => setModalRestaurar(r)}
                                                 className="bg-blue-900 hover:bg-blue-800 text-white text-sm px-3 py-1 rounded-lg transition-colors">

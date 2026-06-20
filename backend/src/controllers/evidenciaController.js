@@ -2,6 +2,11 @@ import Reporte from "../models/Reporte.js"
 import cloudinary from "../config/cloudinary.js"
 import fs from "fs-extra"
 
+// Límites de evidencias por reporte
+const MAX_IMAGENES = 5
+const MAX_DOCUMENTOS = 3
+const MAX_ENLACES = 5
+
 // Ventana de tiempo (horas) para que el usuario normal gestione evidencias
 const LIMITE_HORAS = 48
 
@@ -39,6 +44,14 @@ export const subirImagenes = async (req, res) => {
         const archivos = Array.isArray(req.files.imagenes)
             ? req.files.imagenes
             : [req.files.imagenes]
+
+        // Verificar límite de imágenes
+        const totalActual = reporte.imagenes?.length || 0
+        if (totalActual + archivos.length > MAX_IMAGENES) {
+            return res.status(400).json({
+                msg: `Solo puedes subir hasta ${MAX_IMAGENES} imágenes por reporte. Ya tienes ${totalActual}.`
+            })
+        }
 
         for (const archivo of archivos) {
             const { secure_url, public_id } = await cloudinary.uploader.upload(
@@ -84,6 +97,14 @@ export const subirDocumentos = async (req, res) => {
             ? req.files.documentos
             : [req.files.documentos]
 
+        // Verificar límite de documentos
+        const totalActual = reporte.documentos?.length || 0
+        if (totalActual + archivos.length > MAX_DOCUMENTOS) {
+            return res.status(400).json({
+                msg: `Solo puedes subir hasta ${MAX_DOCUMENTOS} documentos por reporte. Ya tienes ${totalActual}.`
+            })
+        }
+
         for (const archivo of archivos) {
             const { secure_url, public_id } = await cloudinary.uploader.upload(
                 archivo.tempFilePath,
@@ -125,6 +146,13 @@ export const agregarEnlace = async (req, res) => {
         }
         if (!puedeModificar(reporte, req.userBDD)) {
             return res.status(403).json({ msg: `Solo puedes gestionar evidencias dentro de las primeras ${LIMITE_HORAS} horas tras crear el reporte` })
+        }
+
+        // Verificar límite de enlaces
+        if (reporte.enlaces?.length >= MAX_ENLACES) {
+            return res.status(400).json({
+                msg: `Solo puedes agregar hasta ${MAX_ENLACES} enlaces por reporte.`
+            })
         }
 
         reporte.enlaces.push({

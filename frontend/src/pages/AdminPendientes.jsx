@@ -3,9 +3,11 @@ import { useNavigate } from "react-router"
 import { ToastContainer } from "react-toastify"
 import axios from "axios"
 import storeAuth from "../context/storeAuth"
+import storeProfile from "../context/storeProfile"
 import Badge from "../components/ui/Badge"
 import Paginacion from "../components/ui/Paginacion"
 import ModalMotivo from "../components/ui/ModalMotivo"
+import ModalConfirmar from "../components/ui/ModalConfirmar"
 import useFetch from "../hooks/useFetch"
 
 const diasDesde = (fecha) => {
@@ -30,6 +32,7 @@ const colorAntiguedad = (fecha) => {
 const AdminPendientes = () => {
     const navigate = useNavigate()
     const { token } = storeAuth()
+    const { user } = storeProfile()
     const { fetchDataBackend } = useFetch()
 
     const [reportes, setReportes] = useState([])
@@ -38,7 +41,11 @@ const AdminPendientes = () => {
     const [pagina, setPagina] = useState(1)
     const [totalPaginas, setTotalPaginas] = useState(1)
     const [total, setTotal] = useState(0)
-    const [modalEliminar, setModalEliminar] = useState(null)
+
+    // Modales
+    const [modalDevolver, setModalDevolver] = useState(null)   // reporte a devolver
+    const [modalEliminar, setModalEliminar] = useState(null)   // reporte ajeno (con motivo)
+    const [modalEliminarPropio, setModalEliminarPropio] = useState(null) // reporte propio (solo confirmar)
 
     const cargar = useCallback(async (pag = 1, busq = "") => {
         setCargando(true)
@@ -49,8 +56,8 @@ const AdminPendientes = () => {
                 `${import.meta.env.VITE_BACKEND_URL}/reportes/pendientes?${params}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             )
-            const ordenados = res.data.reportes.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-            setReportes(ordenados || [])
+            const ordenados = (res.data.reportes || []).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+            setReportes(ordenados)
             setTotalPaginas(res.data.paginas || 1)
             setTotal(res.data.total || 0)
         } catch (error) { console.error(error); setReportes([]) }
@@ -60,8 +67,8 @@ const AdminPendientes = () => {
     useEffect(() => { cargar() }, [])
 
     useEffect(() => {
-        const timer = setTimeout(() => { setPagina(1); cargar(1, busqueda) }, 400)
-        return () => clearTimeout(timer)
+        const t = setTimeout(() => { setPagina(1); cargar(1, busqueda) }, 400)
+        return () => clearTimeout(t)
     }, [busqueda])
 
     const cambiarPagina = (p) => { setPagina(p); cargar(p, busqueda) }
@@ -73,11 +80,35 @@ const AdminPendientes = () => {
         if (res) cargar(pagina, busqueda)
     }
 
-    const handleEliminar = async (motivo) => {
+    // Devolver reporte al usuario con observación
+    const handleDevolver = async (observacion) => {
+        const url = `${import.meta.env.VITE_BACKEND_URL}/reportes/${modalDevolver._id}/devolver`
+        const headers = { Authorization: `Bearer ${token}` }
+        const res = await fetchDataBackend(url, { observacion }, "PATCH", headers)
+        if (res) { setModalDevolver(null); cargar(pagina, busqueda) }
+    }
+
+    // Eliminar reporte ajeno (con motivo → manda correo)
+    const handleEliminarAjeno = async (motivo) => {
         const url = `${import.meta.env.VITE_BACKEND_URL}/reportes/${modalEliminar._id}`
         const headers = { Authorization: `Bearer ${token}` }
         const res = await fetchDataBackend(url, { motivo }, "DELETE", headers)
         if (res) { setModalEliminar(null); cargar(pagina, busqueda) }
+    }
+
+    // Eliminar reporte propio (solo confirmación, sin correo)
+    const handleEliminarPropio = async () => {
+        const url = `${import.meta.env.VITE_BACKEND_URL}/reportes/${modalEliminarPropio._id}`
+        const headers = { Authorization: `Bearer ${token}` }
+        const res = await fetchDataBackend(url, undefined, "DELETE", headers)
+        if (res) { setModalEliminarPropio(null); cargar(pagina, busqueda) }
+    }
+
+    // Decide qué modal abrir al eliminar
+    const handleClickEliminar = (r) => {
+        const esPropio = r.usuario?._id === user?._id || r.usuario?.email === user?.email
+        if (esPropio) setModalEliminarPropio(r)
+        else setModalEliminar(r)
     }
 
     return (
@@ -101,20 +132,22 @@ const AdminPendientes = () => {
 
             {cargando ? <p className="text-slate-400">Cargando...</p>
             : reportes.length === 0 ? (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center text-green-700">No hay reportes pendientes. ¡Todo al día!</div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center text-green-700">
+                    No hay reportes pendientes. ¡Todo al día!
+                </div>
             ) : (
                 <>
                     <div className="overflow-x-auto bg-white rounded-xl shadow-lg">
                         <table className="w-full">
                             <thead className="bg-slate-800 text-slate-200">
                                 <tr>
-                                    <th className="p-3 text-left">Vehículo</th>
-                                    <th className="p-3 text-left">Falla</th>
-                                    <th className="p-3 text-left">Gravedad</th>
-                                    <th className="p-3 text-left">Usuario</th>
-                                    <th className="p-3 text-left">Fecha subida</th>
-                                    <th className="p-3 text-left">Antigüedad</th>
-                                    <th className="p-3 text-left">Acciones</th>
+                                    <th className="p-3 text-center">Vehículo</th>
+                                    <th className="p-3 text-center">Falla</th>
+                                    <th className="p-3 text-center">Gravedad</th>
+                                    <th className="p-3 text-center">Usuario</th>
+                                    <th className="p-3 text-center">Fecha subida</th>
+                                    <th className="p-3 text-center">Antigüedad</th>
+                                    <th className="p-3 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -132,11 +165,16 @@ const AdminPendientes = () => {
                                         </td>
                                         <td className="p-3 text-sm text-slate-500">{formatearFechaHora(r.createdAt)}</td>
                                         <td className={`p-3 text-sm ${colorAntiguedad(r.createdAt)}`}>{diasDesde(r.createdAt)}</td>
-                                        <td className="p-3">
-                                            <div className="flex gap-2 flex-wrap">
-                                                <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)} className="text-blue-700 hover:underline text-sm">Revisar</button>
-                                                <button type="button" onClick={() => handleValidar(r._id)} className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded-lg">Validar</button>
-                                                <button type="button" onClick={() => setModalEliminar(r)} className="bg-red-100 hover:bg-red-200 text-red-700 text-sm px-3 py-1 rounded-lg">Eliminar</button>
+                                        <td className="p-3 text-center">
+                                            <div className="flex flex-col gap-1.5 items-center">
+                                                <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)}
+                                                    className="w-full bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                                    👁 Revisar
+                                                </button>
+                                                <button type="button" onClick={() => handleClickEliminar(r)}
+                                                    className="w-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                                    🗑 Eliminar
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -148,12 +186,35 @@ const AdminPendientes = () => {
                 </>
             )}
 
+            {/* Modal devolver con observación */}
+            {modalDevolver && (
+                <ModalMotivo
+                    titulo="↩️ Devolver reporte al usuario"
+                    descripcion={`Escribe qué debe corregir ${modalDevolver.usuario?.nombre}. El usuario recibirá esta observación por correo y podrá editar su reporte.`}
+                    colorBoton="bg-blue-900 hover:bg-blue-800"
+                    onConfirmar={handleDevolver}
+                    onCancelar={() => setModalDevolver(null)}
+                />
+            )}
+
+            {/* Modal eliminar reporte ajeno (con motivo → correo) */}
             {modalEliminar && (
                 <ModalMotivo
                     titulo="Eliminar reporte"
                     descripcion={`Vas a eliminar el reporte de ${modalEliminar.usuario?.nombre}. El usuario recibirá un correo con el motivo.`}
-                    onConfirmar={handleEliminar}
+                    onConfirmar={handleEliminarAjeno}
                     onCancelar={() => setModalEliminar(null)}
+                />
+            )}
+
+            {/* Modal eliminar reporte propio (solo confirmación) */}
+            {modalEliminarPropio && (
+                <ModalConfirmar
+                    titulo="¿Eliminar este reporte?"
+                    descripcion="¿Estás seguro de que deseas eliminar este reporte? Se moverá a la papelera."
+                    textoConfirmar="Sí, eliminar"
+                    onConfirmar={handleEliminarPropio}
+                    onCancelar={() => setModalEliminarPropio(null)}
                 />
             )}
         </div>

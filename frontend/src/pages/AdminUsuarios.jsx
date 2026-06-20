@@ -211,12 +211,12 @@ const AdminUsuarios = () => {
                                 <table className="w-full">
                                     <thead className="bg-slate-800 text-slate-200">
                                         <tr>
-                                            <th className="p-3 text-left">Nombre</th>
-                                            <th className="p-3 text-left">Correo</th>
-                                            <th className="p-3 text-left">Región / Provincia</th>
+                                            <th className="p-3 text-center">Nombre</th>
+                                            <th className="p-3 text-center">Correo</th>
+                                            <th className="p-3 text-center">Región / Provincia</th>
                                             <th className="p-3 text-center">Reportes</th>
-                                            <th className="p-3 text-left">Estado</th>
-                                            <th className="p-3 text-left">Acciones</th>
+                                            <th className="p-3 text-center">Estado</th>
+                                            <th className="p-3 text-center">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -228,8 +228,8 @@ const AdminUsuarios = () => {
                                                         {u.nombre}
                                                     </button>
                                                 </td>
-                                                <td className="p-3 text-sm text-slate-500">{u.email}</td>
-                                                <td className="p-3 text-sm">
+                                                <td className="p-3 text-sm text-slate-500 text-center">{u.email}</td>
+                                                <td className="p-3 text-sm text-center">
                                                     {u.region ? (
                                                         <div>
                                                             <div className="text-slate-700">{u.region}</div>
@@ -345,17 +345,17 @@ const AdminUsuarios = () => {
                                 <table className="w-full">
                                     <thead className="bg-slate-800 text-slate-200">
                                         <tr>
-                                            <th className="p-3 text-left">Nombre</th>
-                                            <th className="p-3 text-left">Correo</th>
-                                            <th className="p-3 text-left">Eliminado el</th>
-                                            <th className="p-3 text-left">Acción</th>
+                                            <th className="p-3 text-center">Nombre</th>
+                                            <th className="p-3 text-center">Correo</th>
+                                            <th className="p-3 text-center">Eliminado el</th>
+                                            <th className="p-3 text-center">Acción</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {usuariosEliminados.map((u, i) => (
                                             <tr key={u._id} className={i % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                                                <td className="p-3 font-semibold text-slate-700">{u.nombre}</td>
-                                                <td className="p-3 text-sm text-slate-500">{u.email}</td>
+                                                <td className="p-3 font-semibold text-slate-700 text-center">{u.nombre}</td>
+                                                <td className="p-3 text-sm text-slate-500 text-center">{u.email}</td>
                                                 <td className="p-3 text-sm text-slate-400">{formatearFecha(u.eliminadoEn)}</td>
                                                 <td className="p-3">
                                                     <button type="button" onClick={() => setModalAccion({ usuario: u, accion: "restaurar" })}

@@ -11,7 +11,8 @@ import {
     obtenerReportesEliminados,
     validarReporte,
     invalidarReporte,
-    estadisticas
+    estadisticas,
+    devolverReporte
 } from "../controllers/reporteController.js"
 import { verificarTokenJWT, soloAdmin } from "../middlewares/JWT.js"
 
@@ -38,6 +39,7 @@ router.delete("/reportes/:id", verificarTokenJWT, eliminarReporte)
 // ---- Solo admin (acciones sobre un reporte) ----
 router.patch("/reportes/:id/validar", verificarTokenJWT, soloAdmin, validarReporte)
 router.patch("/reportes/:id/invalidar", verificarTokenJWT, soloAdmin, invalidarReporte)
+router.patch("/reportes/:id/devolver", verificarTokenJWT, soloAdmin, devolverReporte)
 router.patch("/reportes/:id/restaurar", verificarTokenJWT, soloAdmin, restaurarReporte)
 
 export default router

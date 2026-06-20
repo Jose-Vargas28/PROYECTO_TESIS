@@ -1,5 +1,5 @@
 
-//  CONFIG CENTRAL DEL SISTEMA
+//  CONFIGURACIÓN CENTRAL DEL SISTEMA
 
 export const theme = {
     // ---- Identidad del sistema ----
@@ -8,7 +8,7 @@ export const theme = {
     descripcion: "Plataforma colaborativa para reportar y consultar fallas de vehículos comercializados en Ecuador.",
 
     // ---- Colores principales (azul) ----
-    // Tailwind blue-900 (#1e3a8a)
+    // Tailwind usa estas como referencia. El color base es blue-900 (#1e3a8a)
     colores: {
         primario: "#1e3a8a",        // blue-900 - color principal
         primarioHover: "#1e40af",   // blue-800 - hover
@@ -31,7 +31,7 @@ export const theme = {
 }
 
 // Clases de Tailwind reutilizables basadas en el tema
-// Paracambiar cómo se ven los botones/inputs en todo el sistema, editar aquí.
+// Si quieres cambiar cómo se ven los botones/inputs en TODO el sistema, edita aquí.
 export const estilos = {
     botonPrimario: "bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
     botonSecundario: "bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition-colors duration-200",

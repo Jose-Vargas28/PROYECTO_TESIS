@@ -1,4 +1,5 @@
-// Modal de confirmación reutilizable (reemplaza el confirm() del navegador)
+// Modal de confirmación reutilizable
+// Si onConfirmar es null, solo muestra el botón de cancelar (modo informativo)
 const ModalConfirmar = ({
     titulo = "¿Estás seguro?",
     descripcion = "",
@@ -14,18 +15,14 @@ const ModalConfirmar = ({
                 <h3 className="text-lg font-bold text-slate-700 mb-2">{titulo}</h3>
                 {descripcion && <p className="text-slate-500 text-sm mb-6">{descripcion}</p>}
                 <div className="flex gap-3">
-                    <button
-                        type="button"
-                        onClick={onConfirmar}
-                        className={`flex-1 ${colorBoton} text-white font-semibold py-2 rounded-lg transition-colors`}
-                    >
-                        {textoConfirmar}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onCancelar}
-                        className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg transition-colors"
-                    >
+                    {onConfirmar && textoConfirmar && (
+                        <button type="button" onClick={onConfirmar}
+                            className={`flex-1 ${colorBoton} text-white font-semibold py-2 rounded-lg transition-colors`}>
+                            {textoConfirmar}
+                        </button>
+                    )}
+                    <button type="button" onClick={onCancelar}
+                        className={`${onConfirmar ? "flex-1" : "w-full"} bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg transition-colors`}>
                         {textoCancelar}
                     </button>
                 </div>

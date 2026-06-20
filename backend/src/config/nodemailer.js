@@ -194,10 +194,52 @@ const sendMailReporteEliminado = async (userMail, userName, vehiculo, falla, mot
     }
 }
 
+
+// Reporte devuelto con observación
+const sendMailReporteDevuelto = async (userMail, userName, vehiculo, falla, observacion) => {
+    try {
+        const info = await transporter.sendMail({
+            from: `"AutoReporta EC" <${process.env.USER_MAILTRAP}>`,
+            to: userMail,
+            subject: "↩️ Tu reporte necesita correcciones - AutoReporta EC",
+            html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background:#1e3a8a; padding:24px; text-align:center;">
+                    <h1 style="color:white; margin:0; font-size:24px;">AutoReporta EC</h1>
+                </div>
+                <div style="padding:32px;">
+                    <h2 style="color:#1e3a8a;">↩️ Tu reporte necesita correcciones</h2>
+                    <p style="color:#475569;">Hola <strong>${userName}</strong>,</p>
+                    <p style="color:#475569;">Hemos revisado tu reporte y necesita algunos ajustes antes de poder publicarse.</p>
+
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:16px; margin:24px 0;">
+                        <p style="margin:0; color:#1e3a8a;"><strong>Vehículo:</strong> ${vehiculo}</p>
+                        <p style="margin:8px 0 0; color:#1e3a8a;"><strong>Falla reportada:</strong> ${falla}</p>
+                    </div>
+
+                    <div style="background:#f0f9ff; border-left:4px solid #1e3a8a; padding:16px; margin:16px 0; border-radius:4px;">
+                        <p style="margin:0; color:#1e3a8a;"><strong>Observación del administrador:</strong></p>
+                        <p style="margin:8px 0 0; color:#1e3a8a;">${observacion}</p>
+                    </div>
+
+                    <p style="color:#475569;">Por favor ingresa a tu cuenta, edita el reporte con las correcciones indicadas y lo revisaremos nuevamente.</p>
+                </div>
+                <div style="background:#f8fafc; padding:16px; text-align:center; color:#94a3b8; font-size:12px;">
+                    AutoReporta EC — Reportes vehiculares colaborativos del Ecuador
+                </div>
+            </div>`
+        })
+        console.log("Correo de devolución enviado:", info.messageId)
+    } catch (error) {
+        console.error("Error al enviar correo de devolución:", error)
+    }
+}
+
 export {
     sendMailToConfirm,
     sendMailToRecovery,
     sendMailReporteVerificado,
     sendMailReporteInvalidado,
-    sendMailReporteEliminado
+    sendMailReporteEliminado,
+    sendMailReporteDevuelto
 }

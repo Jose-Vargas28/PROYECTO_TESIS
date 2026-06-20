@@ -38,18 +38,15 @@ const MisReportes = () => {
             setReportes(res.data.reportes || [])
             setTotalPaginas(res.data.paginas || 1)
             setTotal(res.data.total || 0)
-        } catch (error) {
-            console.error(error)
-            setReportes([])
-        }
+        } catch (error) { console.error(error); setReportes([]) }
         setCargando(false)
     }, [token])
 
     useEffect(() => { cargar() }, [])
 
     useEffect(() => {
-        const timer = setTimeout(() => { setPagina(1); cargar(1, busqueda) }, 400)
-        return () => clearTimeout(timer)
+        const t = setTimeout(() => { setPagina(1); cargar(1, busqueda) }, 400)
+        return () => clearTimeout(t)
     }, [busqueda])
 
     const cambiarPagina = (p) => { setPagina(p); cargar(p, busqueda) }
@@ -66,76 +63,81 @@ const MisReportes = () => {
             <ToastContainer />
             <h1 className="text-3xl font-bold text-slate-800 mb-2">Mis reportes</h1>
             <p className="text-slate-500 mb-6">
-                {rol === "admin" ? `${total} reporte(s) creados.` : `${total} reporte(s). Puedes editarlos o eliminarlos dentro de las primeras 48 horas.`}
+                {rol === "admin"
+                    ? `${total} reporte(s) creados.`
+                    : `${total} reporte(s). Puedes editarlos dentro de las primeras 48 horas.`}
             </p>
 
             <div className="flex gap-3 mb-6">
-                <input
-                    type="text"
-                    placeholder="Buscar por marca, modelo o falla..."
+                <input type="text" placeholder="Buscar por marca, modelo o falla..."
                     className="flex-1 rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                />
-                {busqueda && (
-                    <button type="button" onClick={() => setBusqueda("")} className="px-3 py-2 text-sm text-slate-500 hover:underline">
-                        Limpiar
-                    </button>
-                )}
+                    value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+                {busqueda && <button type="button" onClick={() => setBusqueda("")} className="px-3 py-2 text-sm text-slate-500 hover:underline">Limpiar</button>}
             </div>
 
-            {cargando ? (
-                <p className="text-slate-400">Cargando...</p>
-            ) : reportes.length === 0 ? (
+            {cargando ? <p className="text-slate-400">Cargando...</p>
+            : reportes.length === 0 ? (
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-8 text-center text-slate-500">
                     Aún no has creado reportes.{" "}
                     <button type="button" onClick={() => navigate("/dashboard/reportar")} className="text-blue-700 hover:underline font-semibold">Crear uno</button>
                 </div>
             ) : (
                 <>
-                    <div className="overflow-x-auto bg-white rounded-xl shadow-lg">
-                        <table className="w-full">
-                            <thead className="bg-slate-800 text-slate-200">
-                                <tr>
-                                    <th className="p-3 text-left">Marca</th>
-                                    <th className="p-3 text-left">Modelo</th>
-                                    <th className="p-3 text-left">Año</th>
-                                    <th className="p-3 text-left">Falla</th>
-                                    <th className="p-3 text-left">Fecha</th>
-                                    <th className="p-3 text-left">Estado</th>
-                                    <th className="p-3 text-left">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {reportes.map((r, i) => (
-                                    <tr key={r._id} className={i % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                                        <td className="p-3">{r.vehiculo?.marca}</td>
-                                        <td className="p-3">{r.vehiculo?.modelo}</td>
-                                        <td className="p-3">{r.vehiculo?.anio}</td>
-                                        <td className="p-3">{r.falla?.nombre}</td>
-                                        <td className="p-3 text-xs text-slate-500">{formatearFecha(r.createdAt)}</td>
-                                        <td className="p-3"><Badge tipo={r.estado} /></td>
-                                        <td className="p-3">
-                                            <div className="flex gap-2 flex-wrap">
-                                                <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)} className="text-blue-700 hover:underline text-sm">Ver</button>
-                                                {r.puedeModificar && r.estado !== "validado" && (
-                                                    <>
-                                                        <button type="button" onClick={() => navigate(`/dashboard/editar/${r._id}`)} className="text-amber-600 hover:underline text-sm">Editar</button>
-                                                        <button type="button" onClick={() => setModalEliminar(r)} className="text-red-600 hover:underline text-sm">Eliminar</button>
-                                                    </>
-                                                )}
-                                                {!r.puedeModificar && r.estado !== "validado" && (
-                                                    <span className="text-xs text-slate-400">Sin acciones (48h)</span>
-                                                )}
-                                                {r.estado === "validado" && (
-                                                    <span className="text-xs text-green-600 italic">✅ Validado</span>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="space-y-3">
+                        {reportes.map((r) => (
+                            <div key={r._id} className="bg-white rounded-xl shadow p-4">
+                                <div className="flex justify-between items-start gap-4 flex-wrap">
+                                    {/* Info principal */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                            <span className="font-bold text-slate-800">
+                                                {r.vehiculo?.marca} {r.vehiculo?.modelo} {r.vehiculo?.anio}
+                                            </span>
+                                            <Badge tipo={r.estado} />
+                                        </div>
+                                        <p className="text-sm text-slate-600">{r.falla?.nombre}</p>
+                                        <p className="text-xs text-slate-400 mt-1">{formatearFecha(r.createdAt)}</p>
+                                    </div>
+
+                                    {/* Acciones */}
+                                    <div className="flex flex-col gap-1.5 shrink-0">
+                                        <div className="flex gap-1.5">
+                                            <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)}
+                                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                                👁 Ver
+                                            </button>
+                                            {r.puedeModificar && r.estado !== "validado" && (
+                                                <button type="button" onClick={() => navigate(`/dashboard/editar/${r._id}`)}
+                                                    className="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                                    ✏️ Editar
+                                                </button>
+                                            )}
+                                        </div>
+                                        {r.puedeModificar && r.estado !== "validado" && (
+                                            <button type="button" onClick={() => setModalEliminar(r)}
+                                                className="w-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors text-center">
+                                                🗑 Eliminar
+                                            </button>
+                                        )}
+                                        {r.estado === "validado" && (
+                                            <span className="text-xs text-green-600 font-semibold text-center">✅ Validado</span>
+                                        )}
+                                        {!r.puedeModificar && r.estado !== "validado" && (
+                                            <span className="text-xs text-slate-400 italic text-center">Sin acciones (48h)</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Observación del admin si existe */}
+                                {r.observacion && (
+                                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                                        <p className="text-xs font-semibold text-blue-800 mb-1">↩️ Observación del administrador:</p>
+                                        <p className="text-sm text-blue-700">{r.observacion}</p>
+                                        <p className="text-xs text-blue-400 mt-1">Edita tu reporte para corregir esto y vuelve a enviarlo.</p>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
                     <Paginacion paginaActual={pagina} totalPaginas={totalPaginas} onCambiar={cambiarPagina} />
                 </>
@@ -144,7 +146,7 @@ const MisReportes = () => {
             {modalEliminar && (
                 <ModalConfirmar
                     titulo="¿Eliminar reporte?"
-                    descripcion={`¿Estás seguro de que deseas eliminar el reporte del ${modalEliminar.vehiculo?.marca} ${modalEliminar.vehiculo?.modelo}?`}
+                    descripcion={`¿Eliminar el reporte del ${modalEliminar.vehiculo?.marca} ${modalEliminar.vehiculo?.modelo}?`}
                     textoConfirmar="Sí, eliminar"
                     onConfirmar={handleEliminar}
                     onCancelar={() => setModalEliminar(null)}

@@ -1,7 +1,8 @@
-
+// =============================================================
 //  Helpers para enlaces de YouTube
+// =============================================================
 
-// Para extraer el ID de un video de YouTube desde varias formas de URL
+// Extrae el ID de un video de YouTube desde varias formas de URL
 export const getYoutubeId = (url) => {
     if (!url) return null
     const patterns = [

@@ -3,7 +3,8 @@ import User from "../models/User.js"
 import {
     sendMailReporteVerificado,
     sendMailReporteInvalidado,
-    sendMailReporteEliminado
+    sendMailReporteEliminado,
+    sendMailReporteDevuelto
 } from "../config/nodemailer.js"
 
 const LIMITE_HORAS = 48
@@ -169,6 +170,9 @@ export const obtenerReportesPendientes = async (req, res) => {
 
         let filtro = { activo: true, validado: false }
 
+        // Excluir reportes creados por el propio admin que consulta
+        filtro.usuario = { $ne: req.userBDD._id }
+
         if (busqueda) {
             const Vehiculo = (await import("../models/Vehiculo.js")).default
             const Falla = (await import("../models/Falla.js")).default
@@ -233,6 +237,10 @@ export const actualizarReporte = async (req, res) => {
         if (vehiculo !== undefined) reporte.vehiculo = vehiculo
         if (falla !== undefined) reporte.falla = falla
 
+        // Limpiar observación cuando el usuario edita el reporte (ya fue atendida)
+        reporte.observacion = null
+        reporte.observadoPor = null
+        reporte.observadoEn = null
         await reporte.save()
         res.status(200).json({ msg: "Reporte actualizado correctamente" })
     } catch (error) {
@@ -436,5 +444,41 @@ export const estadisticas = async (req, res) => {
     } catch (error) {
         console.error(error)
         res.status(500).json({ msg: "Error al obtener estadísticas" })
+    }
+}
+
+// DEVOLVER REPORTE AL USUARIO (admin) - queda pendiente con observación
+export const devolverReporte = async (req, res) => {
+    try {
+        const { observacion } = req.body
+        if (!observacion || observacion.trim().length < 10) {
+            return res.status(400).json({ msg: "Debes escribir una observación de al menos 10 caracteres" })
+        }
+
+        const reporte = await popReporte(Reporte.findOne({ _id: req.params.id, activo: true, validado: false }))
+        if (!reporte) {
+            return res.status(404).json({ msg: "Reporte no encontrado o ya fue validado" })
+        }
+
+        // Guardar observación
+        reporte.observacion = observacion.trim()
+        reporte.observadoPor = req.userBDD._id
+        reporte.observadoEn = new Date()
+        await reporte.save()
+
+        // Notificar al usuario por correo
+        const usuario = await User.findById(reporte.usuario)
+        if (usuario?.email) {
+            const vehiculo = reporte.vehiculo
+                ? `${reporte.vehiculo.marca} ${reporte.vehiculo.modelo} ${reporte.vehiculo.anio}`
+                : "Vehículo"
+            const falla = reporte.falla?.nombre || "Falla reportada"
+            sendMailReporteDevuelto(usuario.email, usuario.nombre, vehiculo, falla, observacion.trim())
+        }
+
+        res.status(200).json({ msg: "Reporte devuelto al usuario con observación" })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al devolver el reporte" })
     }
 }

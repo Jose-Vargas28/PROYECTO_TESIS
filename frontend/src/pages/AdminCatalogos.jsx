@@ -1,341 +1,413 @@
-import { tiposCombustible, tiposVehiculo, aniosVehiculo } from "../config/ecuador"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { ToastContainer, toast } from "react-toastify"
+import { tiposCombustible, tiposVehiculo, aniosVehiculo } from "../config/ecuador"
 import {
     getVehiculos, actualizarVehiculo, eliminarVehiculo,
     getFallas, actualizarFalla, eliminarFalla
 } from "../services/catalogoService"
+import ModalConfirmar from "../components/ui/ModalConfirmar"
+import Paginacion from "../components/ui/Paginacion"
+
+const formatearFecha = (fecha) => {
+    if (!fecha) return "—"
+    return new Date(fecha).toLocaleDateString("es-EC", { day: "2-digit", month: "2-digit", year: "numeric" })
+}
 
 const AdminCatalogos = () => {
+    // Vehículos
     const [vehiculos, setVehiculos] = useState([])
+    const [busquedaV, setBusquedaV] = useState("")
+    const [paginaV, setPaginaV] = useState(1)
+    const [totalPaginasV, setTotalPaginasV] = useState(1)
+    const [totalV, setTotalV] = useState(0)
+    const [cargandoV, setCargandoV] = useState(true)
+
+    // Fallas
     const [fallas, setFallas] = useState([])
-    const [cargando, setCargando] = useState(true)
+    const [busquedaF, setBusquedaF] = useState("")
+    const [paginaF, setPaginaF] = useState(1)
+    const [totalPaginasF, setTotalPaginasF] = useState(1)
+    const [totalF, setTotalF] = useState(0)
+    const [cargandoF, setCargandoF] = useState(true)
 
-    // Modal de edición para vehículos
-    const [modalVehiculo, setModalVehiculo] = useState(null) // null o el vehículo a editar
-    const [formVehiculo, setFormVehiculo] = useState({ marca: "", modelo: "", anio: "" })
+    // Modales vehículo
+    const [detalleVehiculo, setDetalleVehiculo] = useState(null)
+    const [editarVehiculo, setEditarVehiculo] = useState(null)
+    const [eliminarVehiculoModal, setEliminarVehiculoModal] = useState(null)
+    const [formVehiculo, setFormVehiculo] = useState({ marca: "", modelo: "", anio: "", tipo: "automóvil", combustible: "gasolina" })
+    const [anioManualModal, setAnioManualModal] = useState(false)
 
-    // Modal de edición para fallas
-    const [modalFalla, setModalFalla] = useState(null)
-    const [anioManualModal, setAnioManualModal] = useState(false) // null o la falla a editar
+    // Modales falla
+    const [detalleFalla, setDetalleFalla] = useState(null)
+    const [editarFalla, setEditarFalla] = useState(null)
+    const [eliminarFallaModal, setEliminarFallaModal] = useState(null)
     const [formFalla, setFormFalla] = useState({ nombre: "", descripcion: "", gravedad: "media" })
 
-    const getHeaders = () => {
-        const storedUser = JSON.parse(localStorage.getItem("auth-token"))
-        return { Authorization: `Bearer ${storedUser?.state?.token}` }
-    }
+    const inputClass = "block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
 
-    const cargar = async () => {
+    const cargarVehiculos = useCallback(async (pag = 1, busq = "") => {
+        setCargandoV(true)
         try {
-            const [v, f] = await Promise.all([getVehiculos(), getFallas()])
-            setVehiculos(v.data)
-            setFallas(f.data)
-        } catch (error) {
-            console.error(error)
-        }
-        setCargando(false)
-    }
+            const res = await getVehiculos(pag, busq)
+            setVehiculos(res.data.vehiculos || [])
+            setTotalPaginasV(res.data.paginas || 1)
+            setTotalV(res.data.total || 0)
+        } catch (error) { console.error(error); setVehiculos([]) }
+        setCargandoV(false)
+    }, [])
+
+    const cargarFallas = useCallback(async (pag = 1, busq = "") => {
+        setCargandoF(true)
+        try {
+            const res = await getFallas(pag, busq)
+            setFallas(res.data.fallas || [])
+            setTotalPaginasF(res.data.paginas || 1)
+            setTotalF(res.data.total || 0)
+        } catch (error) { console.error(error); setFallas([]) }
+        setCargandoF(false)
+    }, [])
+
+    useEffect(() => { cargarVehiculos(); cargarFallas() }, [])
 
     useEffect(() => {
-        cargar()
-    }, [])
+        const t = setTimeout(() => { setPaginaV(1); cargarVehiculos(1, busquedaV) }, 400)
+        return () => clearTimeout(t)
+    }, [busquedaV])
+
+    useEffect(() => {
+        const t = setTimeout(() => { setPaginaF(1); cargarFallas(1, busquedaF) }, 400)
+        return () => clearTimeout(t)
+    }, [busquedaF])
 
     // ---- Vehículos ----
     const abrirEditarVehiculo = (v) => {
-        setFormVehiculo({ marca: v.marca, modelo: v.modelo, anio: v.anio, tipo: v.tipo || 'auto', combustible: v.combustible || 'gasolina' })
-        setModalVehiculo(v)
+        setFormVehiculo({ marca: v.marca, modelo: v.modelo, anio: v.anio, tipo: v.tipo || "automóvil", combustible: v.combustible || "gasolina" })
+        setAnioManualModal(!aniosVehiculo.includes(Number(v.anio)))
+        setEditarVehiculo(v)
     }
 
     const handleGuardarVehiculo = async () => {
-        if (!formVehiculo.marca || !formVehiculo.modelo || !formVehiculo.anio) {
-            return toast.error("Completa todos los campos")
-        }
+        if (!formVehiculo.marca || !formVehiculo.modelo || !formVehiculo.anio) return toast.error("Completa todos los campos")
         try {
-            const res = await actualizarVehiculo(modalVehiculo._id, {
-                marca: formVehiculo.marca,
-                modelo: formVehiculo.modelo,
-                anio: Number(formVehiculo.anio),
-                tipo: formVehiculo.tipo,
-                combustible: formVehiculo.combustible
+            const res = await actualizarVehiculo(editarVehiculo._id, {
+                marca: formVehiculo.marca, modelo: formVehiculo.modelo,
+                anio: Number(formVehiculo.anio), tipo: formVehiculo.tipo, combustible: formVehiculo.combustible
             })
             toast.success(res.data.msg)
-            setModalVehiculo(null)
-            cargar()
-        } catch (error) {
-            toast.error(error?.response?.data?.msg || "Error al actualizar")
-        }
+            setEditarVehiculo(null)
+            cargarVehiculos(paginaV, busquedaV)
+        } catch (error) { toast.error(error?.response?.data?.msg || "Error al actualizar") }
     }
 
-    const handleEliminarVehiculo = async (id) => {
-        if (!confirm("¿Eliminar este vehículo del catálogo?")) return
+    const handleEliminarVehiculo = async () => {
         try {
-            const res = await eliminarVehiculo(id)
+            const res = await eliminarVehiculo(eliminarVehiculoModal._id)
             toast.success(res.data.msg)
-            cargar()
+            setEliminarVehiculoModal(null)
+            cargarVehiculos(paginaV, busquedaV)
         } catch (error) {
             toast.error(error?.response?.data?.msg || "Error al eliminar")
+            setEliminarVehiculoModal(null)
         }
     }
 
     // ---- Fallas ----
     const abrirEditarFalla = (f) => {
         setFormFalla({ nombre: f.nombre, descripcion: f.descripcion || "", gravedad: f.gravedad || "media" })
-        setModalFalla(f)
+        setEditarFalla(f)
     }
 
     const handleGuardarFalla = async () => {
         if (!formFalla.nombre) return toast.error("El nombre es obligatorio")
         try {
-            const res = await actualizarFalla(modalFalla._id, formFalla)
+            const res = await actualizarFalla(editarFalla._id, formFalla)
             toast.success(res.data.msg)
-            setModalFalla(null)
-            cargar()
-        } catch (error) {
-            toast.error(error?.response?.data?.msg || "Error al actualizar")
-        }
+            setEditarFalla(null)
+            cargarFallas(paginaF, busquedaF)
+        } catch (error) { toast.error(error?.response?.data?.msg || "Error al actualizar") }
     }
 
-    const handleEliminarFalla = async (id) => {
-        if (!confirm("¿Eliminar esta falla del catálogo?")) return
+    const handleEliminarFalla = async () => {
         try {
-            const res = await eliminarFalla(id)
+            const res = await eliminarFalla(eliminarFallaModal._id)
             toast.success(res.data.msg)
-            cargar()
+            setEliminarFallaModal(null)
+            cargarFallas(paginaF, busquedaF)
         } catch (error) {
             toast.error(error?.response?.data?.msg || "Error al eliminar")
+            setEliminarFallaModal(null)
         }
     }
-
-    const inputClass = "block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
-
-    if (cargando) return <p className="text-slate-400">Cargando...</p>
 
     return (
         <div>
             <ToastContainer />
             <h1 className="text-3xl font-bold text-slate-800 mb-2">Catálogos</h1>
-            <p className="text-slate-500 mb-6">Gestiona los vehículos y tipos de falla registrados.</p>
+            <p className="text-slate-500 mb-2">Gestiona los vehículos y tipos de falla registrados.</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-6 text-sm text-amber-800">
+                ⚠️ Los vehículos y fallas con reportes asociados no pueden eliminarse. Usa "Editar" para corregir datos incorrectos.
+            </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-                {/* Vehículos */}
+                {/* ---- VEHÍCULOS ---- */}
                 <div className="bg-white rounded-xl shadow-lg p-6">
-                    <h2 className="text-lg font-bold text-slate-700 mb-4">
-                        Vehículos ({vehiculos.length})
-                    </h2>
-                    {vehiculos.length === 0 ? (
-                        <p className="text-slate-400 text-sm">No hay vehículos registrados.</p>
+                    <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-lg font-bold text-slate-700">Vehículos ({totalV})</h2>
+                    </div>
+                    <input type="text" placeholder="Buscar por marca o modelo..."
+                        className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm mb-3"
+                        value={busquedaV} onChange={(e) => setBusquedaV(e.target.value)} />
+
+                    {cargandoV ? <p className="text-slate-400 text-sm">Cargando...</p>
+                    : vehiculos.length === 0 ? (
+                        <p className="text-slate-400 text-sm">No hay vehículos que coincidan.</p>
                     ) : (
-                        <ul className="space-y-2 max-h-96 overflow-y-auto">
-                            {vehiculos.map(v => (
-                                <li key={v._id} className="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg">
-                                    <div>
-                                        <span className="text-sm text-slate-700 font-medium">{v.marca} {v.modelo} {v.anio}</span>
-                                        <div className="flex gap-1 mt-0.5">
-                                            <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{v.tipo || 'auto'}</span>
-                                            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">{v.combustible || 'gasolina'}</span>
+                        <>
+                            <ul className="space-y-2">
+                                {vehiculos.map(v => (
+                                    <li key={v._id} className="bg-slate-50 px-3 py-2.5 rounded-lg">
+                                        <div className="flex justify-between items-start gap-2">
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold text-slate-700">{v.marca} {v.modelo} {v.anio}</p>
+                                                <div className="flex gap-1 mt-0.5 flex-wrap">
+                                                    <span className="text-xs px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">{v.tipo || "automóvil"}</span>
+                                                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">{v.combustible || "gasolina"}</span>
+                                                    {v.totalReportes > 0 && (
+                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">{v.totalReportes} reporte(s)</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-slate-400 mt-0.5">{v.creadoPor?.nombre || "—"} · {formatearFecha(v.createdAt)}</p>
+                                            </div>
+                                            <div className="flex gap-2 shrink-0">
+                                                <button type="button" onClick={() => setDetalleVehiculo(v)} className="text-blue-700 hover:underline text-xs font-semibold">Ver</button>
+                                                <button type="button" onClick={() => abrirEditarVehiculo(v)} className="text-amber-600 hover:underline text-xs font-semibold">Editar</button>
+                                                <button type="button" onClick={() => setEliminarVehiculoModal(v)} className="text-red-500 hover:underline text-xs">Eliminar</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <button
-                                            type="button"
-                                            onClick={() => abrirEditarVehiculo(v)}
-                                            className="text-blue-700 hover:underline text-xs font-semibold"
-                                        >
-                                            Editar
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleEliminarVehiculo(v._id)}
-                                            className="text-red-600 hover:underline text-xs"
-                                        >
-                                            Eliminar
-                                        </button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                                    </li>
+                                ))}
+                            </ul>
+                            <Paginacion paginaActual={paginaV} totalPaginas={totalPaginasV}
+                                onCambiar={(p) => { setPaginaV(p); cargarVehiculos(p, busquedaV) }} />
+                        </>
                     )}
                 </div>
 
-                {/* Fallas */}
+                {/* ---- FALLAS ---- */}
                 <div className="bg-white rounded-xl shadow-lg p-6">
-                    <h2 className="text-lg font-bold text-slate-700 mb-4">
-                        Tipos de falla ({fallas.length})
-                    </h2>
-                    {fallas.length === 0 ? (
-                        <p className="text-slate-400 text-sm">No hay fallas registradas.</p>
+                    <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-lg font-bold text-slate-700">Tipos de falla ({totalF})</h2>
+                    </div>
+                    <input type="text" placeholder="Buscar por nombre de falla..."
+                        className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm mb-3"
+                        value={busquedaF} onChange={(e) => setBusquedaF(e.target.value)} />
+
+                    {cargandoF ? <p className="text-slate-400 text-sm">Cargando...</p>
+                    : fallas.length === 0 ? (
+                        <p className="text-slate-400 text-sm">No hay fallas que coincidan.</p>
                     ) : (
-                        <ul className="space-y-2 max-h-96 overflow-y-auto">
-                            {fallas.map(f => (
-                                <li key={f._id} className="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg">
-                                    <div>
-                                        <span className="text-sm text-slate-700 font-medium">{f.nombre}</span>
-                                        <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
-                                            f.gravedad === "alta" ? "bg-red-100 text-red-700" :
-                                            f.gravedad === "baja" ? "bg-blue-100 text-blue-700" :
-                                            "bg-amber-100 text-amber-700"
-                                        }`}>{f.gravedad || "media"}</span>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <button
-                                            type="button"
-                                            onClick={() => abrirEditarFalla(f)}
-                                            className="text-blue-700 hover:underline text-xs font-semibold"
-                                        >
-                                            Editar
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleEliminarFalla(f._id)}
-                                            className="text-red-600 hover:underline text-xs"
-                                        >
-                                            Eliminar
-                                        </button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                        <>
+                            <ul className="space-y-2">
+                                {fallas.map(f => (
+                                    <li key={f._id} className="bg-slate-50 px-3 py-2.5 rounded-lg">
+                                        <div className="flex justify-between items-start gap-2">
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-sm font-semibold text-slate-700">{f.nombre}</span>
+                                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                                                        f.gravedad === "alta" ? "bg-red-100 text-red-700" :
+                                                        f.gravedad === "baja" ? "bg-blue-100 text-blue-700" :
+                                                        "bg-amber-100 text-amber-700"
+                                                    }`}>{f.gravedad || "media"}</span>
+                                                    {f.totalReportes > 0 && (
+                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">{f.totalReportes} reporte(s)</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-slate-400 mt-0.5">{f.creadoPor?.nombre || "—"} · {formatearFecha(f.createdAt)}</p>
+                                            </div>
+                                            <div className="flex gap-2 shrink-0">
+                                                <button type="button" onClick={() => setDetalleFalla(f)} className="text-blue-700 hover:underline text-xs font-semibold">Ver</button>
+                                                <button type="button" onClick={() => abrirEditarFalla(f)} className="text-amber-600 hover:underline text-xs font-semibold">Editar</button>
+                                                <button type="button" onClick={() => setEliminarFallaModal(f)} className="text-red-500 hover:underline text-xs">Eliminar</button>
+                                            </div>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                            <Paginacion paginaActual={paginaF} totalPaginas={totalPaginasF}
+                                onCambiar={(p) => { setPaginaF(p); cargarFallas(p, busquedaF) }} />
+                        </>
                     )}
                 </div>
             </div>
 
+            {/* Modal detalle vehículo */}
+            {detalleVehiculo && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+                        <h3 className="text-xl font-bold text-slate-700 mb-4">Detalle del vehículo</h3>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div><p className="text-xs text-slate-400">Marca</p><p className="font-semibold">{detalleVehiculo.marca}</p></div>
+                            <div><p className="text-xs text-slate-400">Modelo</p><p className="font-semibold">{detalleVehiculo.modelo}</p></div>
+                            <div><p className="text-xs text-slate-400">Año</p><p className="font-semibold">{detalleVehiculo.anio}</p></div>
+                            <div><p className="text-xs text-slate-400">Tipo</p><p className="font-semibold capitalize">{detalleVehiculo.tipo || "automóvil"}</p></div>
+                            <div><p className="text-xs text-slate-400">Combustible</p><p className="font-semibold capitalize">{detalleVehiculo.combustible || "gasolina"}</p></div>
+                            <div><p className="text-xs text-slate-400">Registrado por</p><p className="font-semibold">{detalleVehiculo.creadoPor?.nombre || "—"}</p></div>
+                            <div><p className="text-xs text-slate-400">Fecha</p><p className="font-semibold">{formatearFecha(detalleVehiculo.createdAt)}</p></div>
+                            <div><p className="text-xs text-slate-400">Reportes asociados</p>
+                                <p className={`font-bold text-lg ${detalleVehiculo.totalReportes > 0 ? "text-green-600" : "text-slate-400"}`}>{detalleVehiculo.totalReportes}</p>
+                            </div>
+                        </div>
+                        {detalleVehiculo.totalReportes > 0 && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mt-3 text-sm text-amber-800">
+                                Tiene <strong>{detalleVehiculo.totalReportes} reporte(s)</strong> asociado(s) y no puede eliminarse. Gestiona los reportes desde la tabla general.
+                            </div>
+                        )}
+                        <button type="button" onClick={() => setDetalleVehiculo(null)}
+                            className="mt-6 w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg">Cerrar</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal detalle falla */}
+            {detalleFalla && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+                        <h3 className="text-xl font-bold text-slate-700 mb-4">Detalle del tipo de falla</h3>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div className="col-span-2"><p className="text-xs text-slate-400">Nombre</p><p className="font-semibold">{detalleFalla.nombre}</p></div>
+                            {detalleFalla.descripcion && <div className="col-span-2"><p className="text-xs text-slate-400">Descripción</p><p className="text-slate-700">{detalleFalla.descripcion}</p></div>}
+                            <div><p className="text-xs text-slate-400">Gravedad</p>
+                                <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-semibold mt-1 ${
+                                    detalleFalla.gravedad === "alta" ? "bg-red-100 text-red-700" :
+                                    detalleFalla.gravedad === "baja" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                                }`}>{detalleFalla.gravedad || "media"}</span>
+                            </div>
+                            <div><p className="text-xs text-slate-400">Reportes asociados</p>
+                                <p className={`font-bold text-lg ${detalleFalla.totalReportes > 0 ? "text-green-600" : "text-slate-400"}`}>{detalleFalla.totalReportes}</p>
+                            </div>
+                            <div><p className="text-xs text-slate-400">Registrado por</p><p className="font-semibold">{detalleFalla.creadoPor?.nombre || "—"}</p></div>
+                            <div><p className="text-xs text-slate-400">Fecha</p><p className="font-semibold">{formatearFecha(detalleFalla.createdAt)}</p></div>
+                        </div>
+                        {detalleFalla.totalReportes > 0 && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mt-3 text-sm text-amber-800">
+                                Tiene <strong>{detalleFalla.totalReportes} reporte(s)</strong> asociado(s) y no puede eliminarse. Gestiona los reportes desde la tabla general.
+                            </div>
+                        )}
+                        <button type="button" onClick={() => setDetalleFalla(null)}
+                            className="mt-6 w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg">Cerrar</button>
+                    </div>
+                </div>
+            )}
+
             {/* Modal editar vehículo */}
-            {modalVehiculo && (
+            {editarVehiculo && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
                         <h3 className="text-xl font-bold text-slate-700 mb-4">Editar vehículo</h3>
                         <div className="space-y-3">
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-700">Marca</label>
-                                <input
-                                    className={inputClass}
-                                    value={formVehiculo.marca}
-                                    onChange={(e) => setFormVehiculo({ ...formVehiculo, marca: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-700">Modelo</label>
-                                <input
-                                    className={inputClass}
-                                    value={formVehiculo.modelo}
-                                    onChange={(e) => setFormVehiculo({ ...formVehiculo, modelo: e.target.value })}
-                                />
-                            </div>
+                            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Marca</label>
+                                <input className={inputClass} value={formVehiculo.marca} onChange={(e) => setFormVehiculo({ ...formVehiculo, marca: e.target.value })} /></div>
+                            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Modelo</label>
+                                <input className={inputClass} value={formVehiculo.modelo} onChange={(e) => setFormVehiculo({ ...formVehiculo, modelo: e.target.value })} /></div>
                             <div>
                                 <label className="mb-2 block text-sm font-semibold text-slate-700">Año</label>
                                 {!anioManualModal ? (
-                                    <select className={inputClass} value={formVehiculo.anio}
-                                        onChange={(e) => {
-                                            if (e.target.value === "otro") {
-                                                setAnioManualModal(true)
-                                                setFormVehiculo({ ...formVehiculo, anio: "" })
-                                            } else {
-                                                setFormVehiculo({ ...formVehiculo, anio: e.target.value })
-                                            }
-                                        }}>
+                                    <select className={inputClass} value={formVehiculo.anio} onChange={(e) => {
+                                        if (e.target.value === "otro") { setAnioManualModal(true); setFormVehiculo({ ...formVehiculo, anio: "" }) }
+                                        else setFormVehiculo({ ...formVehiculo, anio: e.target.value })
+                                    }}>
                                         <option value="">Seleccionar año</option>
                                         {aniosVehiculo.map(a => <option key={a} value={a}>{a}</option>)}
                                         <option value="otro">Otro año...</option>
                                     </select>
                                 ) : (
                                     <div className="flex gap-2">
-                                        <input type="number" className={inputClass} placeholder="Ej. 2027"
-                                            value={formVehiculo.anio}
-                                            onChange={(e) => setFormVehiculo({ ...formVehiculo, anio: e.target.value })}
-                                            min="1900" max="2100" />
+                                        <input type="number" className={inputClass} placeholder="Ej. 2027" value={formVehiculo.anio}
+                                            onChange={(e) => setFormVehiculo({ ...formVehiculo, anio: e.target.value })} min="1900" max="2100" />
                                         <button type="button" onClick={() => { setAnioManualModal(false); setFormVehiculo({ ...formVehiculo, anio: "" }) }}
-                                            className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 border border-slate-300 rounded-md whitespace-nowrap">
-                                            ← Volver
-                                        </button>
+                                            className="px-3 py-2 text-sm text-slate-500 border border-slate-300 rounded-md">← Volver</button>
                                     </div>
                                 )}
                             </div>
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-700">Tipo de vehículo</label>
+                            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Tipo</label>
                                 <select className={inputClass} value={formVehiculo.tipo} onChange={(e) => setFormVehiculo({ ...formVehiculo, tipo: e.target.value })}>
                                     {tiposVehiculo.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-700">Tipo de combustible</label>
+                                </select></div>
+                            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Combustible</label>
                                 <select className={inputClass} value={formVehiculo.combustible} onChange={(e) => setFormVehiculo({ ...formVehiculo, combustible: e.target.value })}>
                                     {tiposCombustible.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                                </select>
-                            </div>
+                                </select></div>
                         </div>
                         <div className="flex gap-3 mt-6">
-                            <button
-                                type="button"
-                                onClick={handleGuardarVehiculo}
-                                className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg transition-colors"
-                            >
-                                Guardar cambios
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setModalVehiculo(null)}
-                                className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg transition-colors"
-                            >
-                                Cancelar
-                            </button>
+                            <button type="button" onClick={handleGuardarVehiculo}
+                                className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg">Guardar</button>
+                            <button type="button" onClick={() => setEditarVehiculo(null)}
+                                className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg">Cancelar</button>
                         </div>
                     </div>
                 </div>
             )}
 
             {/* Modal editar falla */}
-            {modalFalla && (
+            {editarFalla && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
                         <h3 className="text-xl font-bold text-slate-700 mb-4">Editar tipo de falla</h3>
                         <div className="space-y-3">
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-700">Nombre</label>
-                                <input
-                                    className={inputClass}
-                                    value={formFalla.nombre}
-                                    onChange={(e) => setFormFalla({ ...formFalla, nombre: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-700">Descripción (opcional)</label>
-                                <input
-                                    className={inputClass}
-                                    value={formFalla.descripcion}
-                                    onChange={(e) => setFormFalla({ ...formFalla, descripcion: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-700">Gravedad</label>
-                                <select
-                                    className={inputClass}
-                                    value={formFalla.gravedad}
-                                    onChange={(e) => setFormFalla({ ...formFalla, gravedad: e.target.value })}
-                                >
-                                    <option value="baja">Baja (no afecta el funcionamiento)</option>
-                                    <option value="media">Media (funciona con fallas)</option>
-                                    <option value="alta">Alta (riesgo o falla grave)</option>
-                                </select>
-                            </div>
+                            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Nombre</label>
+                                <input className={inputClass} value={formFalla.nombre} onChange={(e) => setFormFalla({ ...formFalla, nombre: e.target.value })} /></div>
+                            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Descripción (opcional)</label>
+                                <input className={inputClass} value={formFalla.descripcion} onChange={(e) => setFormFalla({ ...formFalla, descripcion: e.target.value })} /></div>
+                            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Gravedad</label>
+                                <select className={inputClass} value={formFalla.gravedad} onChange={(e) => setFormFalla({ ...formFalla, gravedad: e.target.value })}>
+                                    <option value="baja">Baja</option>
+                                    <option value="media">Media</option>
+                                    <option value="alta">Alta</option>
+                                </select></div>
                         </div>
                         <div className="flex gap-3 mt-6">
-                            <button
-                                type="button"
-                                onClick={handleGuardarFalla}
-                                className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg transition-colors"
-                            >
-                                Guardar cambios
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setModalFalla(null)}
-                                className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg transition-colors"
-                            >
-                                Cancelar
-                            </button>
+                            <button type="button" onClick={handleGuardarFalla}
+                                className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg">Guardar</button>
+                            <button type="button" onClick={() => setEditarFalla(null)}
+                                className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg">Cancelar</button>
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Modal confirmar eliminar vehículo */}
+            {eliminarVehiculoModal && (
+                <ModalConfirmar
+                    titulo="¿Eliminar vehículo?"
+                    descripcion={
+                        eliminarVehiculoModal.totalReportes > 0
+                            ? `Este vehículo tiene ${eliminarVehiculoModal.totalReportes} reporte(s) y no puede eliminarse. Primero gestiona esos reportes desde la tabla general.`
+                            : `¿Eliminar ${eliminarVehiculoModal.marca} ${eliminarVehiculoModal.modelo} ${eliminarVehiculoModal.anio}?`
+                    }
+                    textoConfirmar={eliminarVehiculoModal.totalReportes > 0 ? null : "Sí, eliminar"}
+                    textoCancelar={eliminarVehiculoModal.totalReportes > 0 ? "Entendido" : "Cancelar"}
+                    colorBoton="bg-red-600 hover:bg-red-700"
+                    onConfirmar={eliminarVehiculoModal.totalReportes > 0 ? null : handleEliminarVehiculo}
+                    onCancelar={() => setEliminarVehiculoModal(null)}
+                />
+            )}
+
+            {/* Modal confirmar eliminar falla */}
+            {eliminarFallaModal && (
+                <ModalConfirmar
+                    titulo="¿Eliminar tipo de falla?"
+                    descripcion={
+                        eliminarFallaModal.totalReportes > 0
+                            ? `Esta falla tiene ${eliminarFallaModal.totalReportes} reporte(s) y no puede eliminarse. Primero gestiona esos reportes desde la tabla general.`
+                            : `¿Eliminar "${eliminarFallaModal.nombre}" del catálogo?`
+                    }
+                    textoConfirmar={eliminarFallaModal.totalReportes > 0 ? null : "Sí, eliminar"}
+                    textoCancelar={eliminarFallaModal.totalReportes > 0 ? "Entendido" : "Cancelar"}
+                    colorBoton="bg-red-600 hover:bg-red-700"
+                    onConfirmar={eliminarFallaModal.totalReportes > 0 ? null : handleEliminarFalla}
+                    onCancelar={() => setEliminarFallaModal(null)}
+                />
             )}
         </div>
     )

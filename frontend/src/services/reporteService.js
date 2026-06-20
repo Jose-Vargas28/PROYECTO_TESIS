@@ -1,9 +1,8 @@
 import axios from "axios"
 
-// =============================================================
+
 //  SERVICIO DE REPORTES
 //  Centraliza las llamadas a los endpoints de reportes.
-// =============================================================
 
 const API = import.meta.env.VITE_BACKEND_URL
 
@@ -53,4 +52,5 @@ export const getPendientes = () => axios.get(`${API}/reportes/pendientes`, authH
 export const getEliminados = () => axios.get(`${API}/reportes/eliminados`, authHeaders())
 export const validarReporte = (id) => axios.patch(`${API}/reportes/${id}/validar`, {}, authHeaders())
 export const invalidarReporte = (id, motivo) => axios.patch(`${API}/reportes/${id}/invalidar`, { motivo }, authHeaders())
+export const devolverReporte = (id, observacion) => axios.patch(`${API}/reportes/${id}/devolver`, { observacion }, authHeaders())
 export const restaurarReporte = (id) => axios.patch(`${API}/reportes/${id}/restaurar`, {}, authHeaders())

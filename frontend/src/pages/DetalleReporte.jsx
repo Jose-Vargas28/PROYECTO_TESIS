@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router"
 import { ToastContainer, toast } from "react-toastify"
-import { getReporteDetalle, validarReporte, invalidarReporte } from "../services/reporteService"
+import { getReporteDetalle, validarReporte, invalidarReporte, devolverReporte } from "../services/reporteService"
 import { getYoutubeEmbedUrl } from "../helpers/youtube"
 import Badge from "../components/ui/Badge"
 import ModalMotivo from "../components/ui/ModalMotivo"
+import storeProfile from "../context/storeProfile"
 import storeAuth from "../context/storeAuth"
 
 const formatearFechaHora = (fecha) => {
@@ -21,6 +22,7 @@ const DetalleReporte = () => {
     const [reporte, setReporte] = useState(null)
     const [cargando, setCargando] = useState(true)
     const [modalInvalidar, setModalInvalidar] = useState(false)
+    const [modalDevolver, setModalDevolver] = useState(false)
     const { rol } = storeAuth()
 
     useEffect(() => {
@@ -43,6 +45,17 @@ const DetalleReporte = () => {
             cargar()
         } catch (error) {
             toast.error(error?.response?.data?.msg || "Error al validar")
+        }
+    }
+
+    const handleDevolver = async (observacion) => {
+        try {
+            await devolverReporte(id, observacion)
+            toast.success("Reporte devuelto al usuario con observación")
+            setModalDevolver(false)
+            cargar()
+        } catch (error) {
+            toast.error(error?.response?.data?.msg || "Error")
         }
     }
 
@@ -130,24 +143,24 @@ const DetalleReporte = () => {
                         </div>
                     )}
 
-                    {/* Acciones del admin — dentro de la tarjeta principal */}
+                    {/* Acciones del admin */}
                     {rol === "admin" && (
-                        <div className="mt-4 pt-4 border-t border-slate-100 flex gap-3 flex-wrap items-center">
-                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Acciones de administrador</span>
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Acciones de administrador</p>
                             {!reporte.validado ? (
-                                <button
-                                    type="button"
-                                    onClick={handleValidar}
-                                    className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg transition-colors"
-                                >
-                                    ✅ Validar reporte
-                                </button>
+                                <div className="flex flex-col gap-2">
+                                    <button type="button" onClick={handleValidar}
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                        ✅ Validar reporte
+                                    </button>
+                                    <button type="button" onClick={() => setModalDevolver(true)}
+                                        className="w-full bg-blue-100 hover:bg-blue-200 text-blue-900 font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                        ↩️ Devolver con observación
+                                    </button>
+                                </div>
                             ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => setModalInvalidar(true)}
-                                    className="bg-amber-500 hover:bg-amber-600 text-white text-sm px-4 py-2 rounded-lg transition-colors"
-                                >
+                                <button type="button" onClick={() => setModalInvalidar(true)}
+                                    className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
                                     ⚠️ Retirar validación
                                 </button>
                             )}
@@ -225,6 +238,15 @@ const DetalleReporte = () => {
                         ))}
                     </ul>
                 </div>
+            )}
+        {modalDevolver && (
+                <ModalMotivo
+                    titulo="↩️ Devolver reporte al usuario"
+                    descripcion="Escribe qué debe corregir el usuario. Recibirá esta observación por correo y podrá editar su reporte."
+                    colorBoton="bg-blue-900 hover:bg-blue-800"
+                    onConfirmar={handleDevolver}
+                    onCancelar={() => setModalDevolver(false)}
+                />
             )}
         {modalInvalidar && (
                 <ModalMotivo

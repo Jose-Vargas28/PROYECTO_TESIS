@@ -45,6 +45,19 @@ const reporteSchema = new Schema({
         type: Boolean,
         default: false
     },
+    observacion: {
+        type: String,
+        default: null
+    },
+    observadoPor: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
+    observadoEn: {
+        type: Date,
+        default: null
+    },
     validadoEn: {
         type: Date,
         default: null

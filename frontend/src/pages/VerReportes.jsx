@@ -136,16 +136,16 @@ const VerReportes = () => {
                         <table className="w-full">
                             <thead className="bg-slate-800 text-slate-200">
                                 <tr>
-                                    <th className="p-3 text-left">Marca</th>
-                                    <th className="p-3 text-left">Modelo</th>
-                                    <th className="p-3 text-left">Año</th>
-                                    <th className="p-3 text-left">Falla</th>
-                                    <th className="p-3 text-left">Tipo</th>
-                                    <th className="p-3 text-left">Combustible</th>
-                                    <th className="p-3 text-left">Gravedad</th>
-                                    <th className="p-3 text-left">Reportado por</th>
-                                    <th className="p-3 text-left">Región / Provincia</th>
-                                    <th className="p-3 text-left">{modoEdicion ? "Acciones" : "Detalle"}</th>
+                                    <th className="p-3 text-center">Marca</th>
+                                    <th className="p-3 text-center">Modelo</th>
+                                    <th className="p-3 text-center">Año</th>
+                                    <th className="p-3 text-center">Falla</th>
+                                    <th className="p-3 text-center">Tipo</th>
+                                    <th className="p-3 text-center">Combustible</th>
+                                    <th className="p-3 text-center">Gravedad</th>
+                                    <th className="p-3 text-center">Reportado por</th>
+                                    <th className="p-3 text-center">Región / Provincia</th>
+                                    <th className="p-3 text-center">{modoEdicion ? "Acciones" : "Detalle"}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -174,9 +174,17 @@ const VerReportes = () => {
                                         </td>
                                         <td className="p-3">
                                             {modoEdicion ? (
-                                                <div className="flex gap-2 flex-wrap">
-                                                    <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)} className="text-blue-700 hover:underline text-sm">Ver</button>
-                                                    <button type="button" onClick={() => navigate(`/dashboard/editar/${r._id}`)} className="text-amber-600 hover:underline text-sm">Editar</button>
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="flex gap-1.5">
+                                                        <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)}
+                                                            className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors text-center">
+                                                            👁 Ver
+                                                        </button>
+                                                        <button type="button" onClick={() => navigate(`/dashboard/editar/${r._id}`)}
+                                                            className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors text-center">
+                                                            ✏️ Editar
+                                                        </button>
+                                                    </div>
                                                     <button type="button"
                                                         onClick={() => {
                                                             if (r.usuario?._id === user?._id || r.usuario?.email === user?.email) {
@@ -185,10 +193,15 @@ const VerReportes = () => {
                                                                 setModalEliminar(r)
                                                             }
                                                         }}
-                                                        className="text-red-500 hover:underline text-sm">Eliminar</button>
+                                                        className="w-full bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors text-center">
+                                                        🗑 Eliminar
+                                                    </button>
                                                 </div>
                                             ) : (
-                                                <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)} className="text-blue-700 hover:underline font-semibold text-sm">Ver detalle</button>
+                                                <button type="button" onClick={() => navigate(`/dashboard/reporte/${r._id}`)}
+                                                    className="bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                                    👁 Ver detalle
+                                                </button>
                                             )}
                                         </td>
                                     </tr>

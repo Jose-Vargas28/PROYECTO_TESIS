@@ -12,6 +12,7 @@ import {
     getFallas, crearFalla,
 } from "../services/catalogoService"
 import { esYoutube } from "../helpers/youtube"
+import SeccionEvidencia from "../components/ui/SeccionEvidencia"
 import { tiposCombustible, tiposVehiculo, aniosVehiculo } from "../config/ecuador"
 
 const ReportarFalla = () => {
@@ -52,8 +53,8 @@ const ReportarFalla = () => {
     const cargarCatalogos = async () => {
         try {
             const [v, f] = await Promise.all([getVehiculos(), getFallas()])
-            setVehiculos(v.data)
-            setFallas(f.data)
+            setVehiculos(v.data.vehiculos || v.data || [])
+            setFallas(f.data.fallas || f.data || [])
         } catch (error) {
             console.error(error)
         }
@@ -143,7 +144,7 @@ const ReportarFalla = () => {
         imagenes.forEach((img) => formData.append("imagenes", img))
         try {
             await subirImagenes(reporteId, formData)
-            toast.success("Imágenes subidas")
+            toast.success("Imágenes subidas correctamente")
             setImagenes([])
         } catch (error) {
             toast.error(error?.response?.data?.msg || "Error al subir imágenes")
@@ -158,7 +159,7 @@ const ReportarFalla = () => {
         documentos.forEach((doc) => formData.append("documentos", doc))
         try {
             await subirDocumentos(reporteId, formData)
-            toast.success("Documentos subidos")
+            toast.success("Documentos subidos correctamente")
             setDocumentos([])
         } catch (error) {
             toast.error(error?.response?.data?.msg || "Error al subir documentos")
