@@ -1,5 +1,6 @@
 import axios from "axios"
 
+
 //  SERVICIO DE CATÁLOGOS (Vehículos y Fallas)
 
 
@@ -51,6 +52,12 @@ export const marcarFotoPrincipal = (id, fotoId) =>
 
 export const reordenarFotosVehiculo = (id, orden) =>
     axios.patch(`${API}/vehiculos/${id}/fotos/reordenar`, { orden }, authHeaders())
+
+export const agregarEnlaceVehiculo = (id, data) =>
+    axios.post(`${API}/vehiculos/${id}/enlaces`, data, authHeaders())
+
+export const eliminarEnlaceVehiculo = (id, enlaceId) =>
+    axios.delete(`${API}/vehiculos/${id}/enlaces/${enlaceId}`, authHeaders())
 
 export const toggleFotoAutoVehiculo = (id) =>
     axios.patch(`${API}/vehiculos/${id}/foto-auto`, {}, authHeaders())

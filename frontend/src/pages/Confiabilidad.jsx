@@ -318,8 +318,8 @@ const Confiabilidad = () => {
                             const posicion = (pagina - 1) * POR_PAGINA + idx + 1
                             return (
                                 <div key={item.vehiculo._id}
-                                    className="bg-white rounded-xl shadow hover:shadow-md transition-shadow overflow-hidden flex flex-col cursor-pointer"
-                                    onClick={() => navigate(`/dashboard/confiabilidad/${item.vehiculo._id}`)}>
+                                    className="bg-white rounded-xl shadow hover:shadow-md transition-shadow overflow-hidden flex flex-col">
+                                    {/* Foto — clic abre lightbox, no navega */}
                                     <div className="relative" onClick={e => e.stopPropagation()}>
                                         <CarruselVehiculo
                                             vehiculo={item.vehiculo}
@@ -329,10 +329,11 @@ const Confiabilidad = () => {
                                             posicion === 1 ? "bg-amber-400" :
                                             posicion === 2 ? "bg-slate-400" :
                                             posicion === 3 ? "bg-amber-700" : "bg-blue-900"
-                                        }`} onClick={() => navigate(`/dashboard/confiabilidad/${item.vehiculo._id}`)}>
+                                        }`}>
                                             {posicion}
                                         </div>
                                     </div>
+                                    {/* Info — solo visual, ya no navega al hacer clic */}
                                     <div className="p-3 flex flex-col gap-1.5 flex-1">
                                         <div className="flex items-center gap-1.5">
                                             <LogoMarca marca={item.vehiculo.marca} size={20} />
@@ -351,9 +352,17 @@ const Confiabilidad = () => {
                                             <span className="text-sm font-bold text-slate-700">{item.puntajeGeneral}</span>
                                         </div>
                                         <BadgeConfiabilidad puntaje={item.puntajeGeneral} />
-                                        <p className="text-xs text-slate-400 mt-auto">
+                                        <p className="text-xs text-slate-400">
                                             {item.totalValoraciones} valoración(es)
                                         </p>
+                                    </div>
+                                    {/* Botón explícito */}
+                                    <div className="px-3 pb-3">
+                                        <button type="button"
+                                            onClick={() => navigate(`/dashboard/confiabilidad/${item.vehiculo._id}`)}
+                                            className="w-full bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors">
+                                            Ver valoraciones ⭐
+                                        </button>
                                     </div>
                                 </div>
                             )

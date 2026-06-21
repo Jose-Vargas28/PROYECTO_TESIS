@@ -2,10 +2,11 @@ import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router"
 import { ToastContainer, toast } from "react-toastify"
 import { getValoracionesVehiculo, crearValoracion, eliminarValoracion } from "../services/valoracionService"
+import { agregarEnlaceVehiculo, eliminarEnlaceVehiculo } from "../services/catalogoService"
+import storeAuth from "../context/storeAuth"
 import LogoMarca from "../components/ui/LogoMarca"
 import Paginacion from "../components/ui/Paginacion"
 import ModalConfirmar from "../components/ui/ModalConfirmar"
-import storeAuth from "../context/storeAuth"
 
 const PEXELS_API_KEY = "OiuVxWLb9nZNUcWR3cuB8b9U5rzj4mSi2ovSNsVfijN1ZYoIBvbAjlWY"
 
@@ -63,7 +64,7 @@ const formatearFecha = (f) => new Date(f).toLocaleDateString("es-EC", { day: "2-
 const DetalleVehiculo = () => {
     const { id } = useParams()
     const navigate = useNavigate()
-    const { token } = storeAuth()
+    const { token, _id: userId, rol } = storeAuth()
 
     const [datos, setDatos] = useState(null)
     const [cargando, setCargando] = useState(true)
@@ -79,11 +80,18 @@ const DetalleVehiculo = () => {
         comentario: ""
     })
 
+    const [mostrarFormEnlace, setMostrarFormEnlace] = useState(false)
+    const [formEnlace, setFormEnlace] = useState({ url: "", titulo: "", descripcion: "" })
+    const [enviandoEnlace, setEnviandoEnlace] = useState(false)
+    const [modalEliminarEnlace, setModalEliminarEnlace] = useState(null)
+    const [enlaces, setEnlaces] = useState([])
+
     const cargar = async (pag = 1) => {
         setCargando(true)
         try {
             const res = await getValoracionesVehiculo(id, pag)
             setDatos(res.data)
+            setEnlaces(res.data.vehiculo?.enlaces || [])
             // Si tiene mi valoración, pre-llenar el formulario
             if (res.data.miValoracion) {
                 const asp = res.data.miValoracion.aspectos
@@ -91,6 +99,28 @@ const DetalleVehiculo = () => {
             }
         } catch (e) { console.error(e) }
         setCargando(false)
+    }
+
+    const handleAgregarEnlace = async () => {
+        if (!formEnlace.url || !formEnlace.titulo) return toast.error("URL y título son obligatorios")
+        setEnviandoEnlace(true)
+        try {
+            const res = await agregarEnlaceVehiculo(id, formEnlace)
+            toast.success("Enlace agregado correctamente")
+            setEnlaces(res.data.enlaces)
+            setFormEnlace({ url: "", titulo: "", descripcion: "" })
+            setMostrarFormEnlace(false)
+        } catch (e) { toast.error(e?.response?.data?.msg || "Error al agregar enlace") }
+        setEnviandoEnlace(false)
+    }
+
+    const handleEliminarEnlace = async () => {
+        try {
+            const res = await eliminarEnlaceVehiculo(id, modalEliminarEnlace._id)
+            toast.success("Enlace eliminado")
+            setEnlaces(res.data.enlaces)
+            setModalEliminarEnlace(null)
+        } catch (e) { toast.error("Error al eliminar enlace") }
     }
 
     useEffect(() => { cargar() }, [id])
@@ -144,7 +174,7 @@ const DetalleVehiculo = () => {
     if (cargando) return <p className="text-slate-400">Cargando...</p>
     if (!datos) return <p className="text-slate-500">Vehículo no encontrado.</p>
 
-    const { vehiculo, resumen, valoraciones, total, paginas, miValoracion, puedoValorar, diasRestantes } = datos
+    const { vehiculo, resumen, valoraciones, total, paginas, miValoracion, puedoValorar, enVentanaCorreccion, horasRestantesVentana, diasRestantesCooldown } = datos
     const puntajeGeneral = resumen?.puntajeGeneral || 0
 
     return (
@@ -218,9 +248,21 @@ const DetalleVehiculo = () => {
                                     <p className="text-sm text-slate-400">Comparte tu experiencia con otros usuarios</p>
                                 )}
                             </div>
-                            <div className="flex gap-2">
-                                {miValoracion && !puedoValorar && (
-                                    <p className="text-xs text-slate-400 italic">Podrás actualizar en {diasRestantes} día(s)</p>
+                            <div className="flex gap-2 items-center">
+                                {miValoracion && enVentanaCorreccion && (
+                                    <p className="text-xs text-green-600 italic">
+                                        Puedes corregir libremente ({horasRestantesVentana}h restantes)
+                                    </p>
+                                )}
+                                {miValoracion && !puedoValorar && !enVentanaCorreccion && (
+                                    <p className="text-xs text-slate-400 italic">
+                                        Podrás actualizar tu valoración en {diasRestantesCooldown} día(s)
+                                    </p>
+                                )}
+                                {miValoracion && puedoValorar && !enVentanaCorreccion && (
+                                    <p className="text-xs text-blue-500 italic">
+                                        Ya puedes actualizar tu valoración
+                                    </p>
                                 )}
                                 {(puedoValorar || !miValoracion) && (
                                     <button type="button" onClick={() => setMostrarFormulario(true)}
@@ -289,6 +331,103 @@ const DetalleVehiculo = () => {
                 </div>
             )}
 
+            {/* Fuentes de seguridad */}
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-700">Fuentes de seguridad</h2>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                            Enlaces a reportes externos de seguridad (Latin NCAP, Euro NCAP, NHTSA, etc.)
+                        </p>
+                    </div>
+                    {token && enlaces.length < 10 && (
+                        <button type="button" onClick={() => setMostrarFormEnlace(!mostrarFormEnlace)}
+                            className="text-sm text-blue-700 hover:underline font-semibold shrink-0">
+                            {mostrarFormEnlace ? "Cancelar" : "+ Agregar enlace"}
+                        </button>
+                    )}
+                </div>
+
+                {/* Formulario agregar enlace */}
+                {mostrarFormEnlace && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 space-y-3">
+                        <div>
+                            <input
+                                className="w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm"
+                                placeholder="URL (Ej: https://www.latinncap.com/...)"
+                                value={formEnlace.url}
+                                onChange={e => setFormEnlace(prev => ({ ...prev, url: e.target.value }))} />
+                        </div>
+                        <div>
+                            <input
+                                className="w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm"
+                                placeholder="Título (Ej: Latin NCAP 2022 — 5 estrellas)"
+                                maxLength={100}
+                                value={formEnlace.titulo}
+                                onChange={e => setFormEnlace(prev => ({ ...prev, titulo: e.target.value }))} />
+                        </div>
+                        <div>
+                            <input
+                                className="w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm"
+                                placeholder="Descripción breve (opcional, máx. 200 caracteres)"
+                                maxLength={200}
+                                value={formEnlace.descripcion}
+                                onChange={e => setFormEnlace(prev => ({ ...prev, descripcion: e.target.value }))} />
+                        </div>
+                        <button type="button" onClick={handleAgregarEnlace} disabled={enviandoEnlace}
+                            className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg text-sm disabled:opacity-50">
+                            {enviandoEnlace ? "Guardando..." : "Guardar enlace"}
+                        </button>
+                    </div>
+                )}
+
+                {/* Lista de enlaces */}
+                {enlaces.length === 0 ? (
+                    <div className="bg-slate-50 rounded-lg p-6 text-center text-slate-400 text-sm">
+                        No hay fuentes externas registradas aún.
+                        {token && <span className="block mt-1">¡Sé el primero en agregar un enlace de seguridad!</span>}
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {enlaces.map(enlace => {
+                            let dominio = ""
+                            try { dominio = new URL(enlace.url).hostname } catch {}
+                            const favicon = dominio ? `https://www.google.com/s2/favicons?domain=${dominio}&sz=32` : null
+                            const esMio = enlace.creadoPor?.toString() === userId
+                            const esAdminUser = rol === "admin"
+                            const puedeEliminar = esMio || esAdminUser
+
+                            return (
+                                <div key={enlace._id} className="flex items-start gap-3 bg-slate-50 rounded-lg px-4 py-3 group">
+                                    {favicon && (
+                                        <img src={favicon} alt={dominio} className="w-6 h-6 mt-0.5 shrink-0 rounded"
+                                            onError={e => e.target.style.display = "none"} />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <a href={enlace.url} target="_blank" rel="noreferrer"
+                                            className="text-sm font-semibold text-blue-700 hover:underline block truncate">
+                                            {enlace.titulo}
+                                        </a>
+                                        {enlace.descripcion && (
+                                            <p className="text-xs text-slate-500 mt-0.5">{enlace.descripcion}</p>
+                                        )}
+                                        <p className="text-xs text-slate-400 mt-0.5 truncate">{dominio}</p>
+                                    </div>
+                                    {token && puedeEliminar && (
+                                        <button type="button"
+                                            onClick={() => setModalEliminarEnlace(enlace)}
+                                            className="shrink-0 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 text-lg leading-none">
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
+                            )
+                        })}
+                        <p className="text-xs text-slate-400 text-right">{enlaces.length}/10 enlaces</p>
+                    </div>
+                )}
+            </div>
+
             {/* Lista de reseñas */}
             {total > 0 && (
                 <div className="bg-white rounded-xl shadow-lg p-6">
@@ -310,6 +449,9 @@ const DetalleVehiculo = () => {
                                             Math.round((Object.values(v.aspectos).reduce((a, b) => a + b, 0) / 7) * 10) / 10
                                         } />
                                         <p className="text-xs text-slate-400 mt-0.5">{formatearFecha(v.createdAt)}</p>
+                                        {v.updatedAt !== v.createdAt && (
+                                            <span className="text-xs text-slate-300 italic">Editada</span>
+                                        )}
                                     </div>
                                 </div>
                                 {v.comentario && (
@@ -340,6 +482,16 @@ const DetalleVehiculo = () => {
                     colorBoton="bg-red-600 hover:bg-red-700"
                     onConfirmar={handleEliminar}
                     onCancelar={() => setModalEliminar(false)}
+                />
+            )}
+            {modalEliminarEnlace && (
+                <ModalConfirmar
+                    titulo="¿Eliminar este enlace?"
+                    descripcion={`Se eliminará "${modalEliminarEnlace.titulo}" permanentemente.`}
+                    textoConfirmar="Sí, eliminar"
+                    colorBoton="bg-red-600 hover:bg-red-700"
+                    onConfirmar={handleEliminarEnlace}
+                    onCancelar={() => setModalEliminarEnlace(null)}
                 />
             )}
         </div>

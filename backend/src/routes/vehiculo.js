@@ -2,7 +2,8 @@ import { Router } from "express"
 import {
     crearVehiculo, listarVehiculos, eliminarVehiculo, actualizarVehiculo,
     subirFotoVehiculo, eliminarFotoVehiculo, marcarFotoPrincipal,
-    toggleFotoAuto, guardarFotoPexels, reordenarFotos
+    toggleFotoAuto, guardarFotoPexels, reordenarFotos,
+    agregarEnlace, eliminarEnlace
 } from "../controllers/vehiculoController.js"
 import { verificarTokenJWT, soloAdmin } from "../middlewares/JWT.js"
 
@@ -20,5 +21,7 @@ router.patch("/vehiculos/:id/fotos/reordenar", verificarTokenJWT, soloAdmin, reo
 router.delete("/vehiculos/:id/fotos/:fotoId", verificarTokenJWT, soloAdmin, eliminarFotoVehiculo)
 router.patch("/vehiculos/:id/fotos/:fotoId/principal", verificarTokenJWT, soloAdmin, marcarFotoPrincipal)
 router.patch("/vehiculos/:id/foto-auto", verificarTokenJWT, soloAdmin, toggleFotoAuto)
+router.post("/vehiculos/:id/enlaces", verificarTokenJWT, agregarEnlace)
+router.delete("/vehiculos/:id/enlaces/:enlaceId", verificarTokenJWT, eliminarEnlace)
 
 export default router

@@ -2,12 +2,48 @@ import Valoracion from "../models/Valoracion.js"
 import Vehiculo from "../models/Vehiculo.js"
 
 const ASPECTOS = ["confiabilidad", "seguridad", "consumo", "precio", "comodidad", "mantenimiento", "repuestos"]
-const DIAS_EDICION = 30
+const HORAS_VENTANA_CORRECCION = 48
+const MAX_EDICIONES_EN_VENTANA = 3
+const DIAS_COOLDOWN = 30
+const LIMITE_DIARIO = 5
 
-// Calcular puntaje general de una valoración
-const calcularPuntaje = (aspectos) => {
-    const suma = ASPECTOS.reduce((acc, a) => acc + (aspectos[a] || 0), 0)
-    return Math.round((suma / ASPECTOS.length) * 10) / 10
+// Calcula el estado de edición de una valoración existente:
+// { puedeEditar, enVentanaCorreccion, horasRestantesVentana, diasRestantesCooldown }
+const calcularEstadoEdicion = (valoracion) => {
+    const ahora = new Date()
+    const horasDesdeUltimaEdicion = (ahora - new Date(valoracion.updatedAt)) / (1000 * 60 * 60)
+    const diasDesdeUltimaEdicion = horasDesdeUltimaEdicion / 24
+
+    const dentroDeVentana = horasDesdeUltimaEdicion <= HORAS_VENTANA_CORRECCION
+    const ediciones = valoracion.edicionesEnVentana || 0
+
+    // Dentro de la ventana de 48h Y no ha agotado las 3 ediciones permitidas
+    if (dentroDeVentana && ediciones < MAX_EDICIONES_EN_VENTANA) {
+        return {
+            puedeEditar: true,
+            enVentanaCorreccion: true,
+            horasRestantesVentana: Math.max(0, Math.ceil(HORAS_VENTANA_CORRECCION - horasDesdeUltimaEdicion)),
+            diasRestantesCooldown: 0
+        }
+    }
+
+    // Ya sea porque pasaron las 48h o porque agotó las 3 ediciones: aplica cooldown de 30 días
+    // desde la última edición
+    if (diasDesdeUltimaEdicion >= DIAS_COOLDOWN) {
+        return {
+            puedeEditar: true,
+            enVentanaCorreccion: false,
+            horasRestantesVentana: 0,
+            diasRestantesCooldown: 0
+        }
+    }
+
+    return {
+        puedeEditar: false,
+        enVentanaCorreccion: false,
+        horasRestantesVentana: 0,
+        diasRestantesCooldown: Math.ceil(DIAS_COOLDOWN - diasDesdeUltimaEdicion)
+    }
 }
 
 // Calcular promedio de valoraciones para un vehículo
@@ -49,28 +85,54 @@ export const crearOActualizarValoracion = async (req, res) => {
         })
 
         if (existente) {
-            // Verificar ventana de 30 días para editar
-            const diasDesdeActualizacion = (new Date() - new Date(existente.updatedAt)) / (1000 * 60 * 60 * 24)
-            if (diasDesdeActualizacion < DIAS_EDICION) {
-                const diasRestantes = Math.ceil(DIAS_EDICION - diasDesdeActualizacion)
+            const estado = calcularEstadoEdicion(existente)
+
+            if (!estado.puedeEditar) {
                 return res.status(400).json({
-                    msg: `Ya valoraste este vehículo. Podrás actualizar tu valoración en ${diasRestantes} día(s).`,
-                    diasRestantes
+                    msg: `Ya editaste esta valoración recientemente. Podrás actualizarla en ${estado.diasRestantesCooldown} día(s).`,
+                    diasRestantes: estado.diasRestantesCooldown
                 })
             }
-            // Actualizar
+
+            // Si seguía dentro de la ventana de corrección, incrementa el contador.
+            // Si el cooldown ya venció (fuera de ventana), se reinicia el contador a 1 (esta nueva edición).
+            existente.edicionesEnVentana = estado.enVentanaCorreccion
+                ? (existente.edicionesEnVentana || 0) + 1
+                : 1
+
             existente.aspectos = aspectos
             existente.comentario = comentario?.trim()?.slice(0, 500) || ""
             await existente.save()
-            return res.status(200).json({ msg: "Valoración actualizada correctamente", valoracion: existente })
+
+            const nuevoEstado = calcularEstadoEdicion(existente)
+            return res.status(200).json({
+                msg: "Valoración actualizada correctamente",
+                valoracion: existente,
+                enVentanaCorreccion: nuevoEstado.enVentanaCorreccion,
+                horasRestantesVentana: nuevoEstado.horasRestantesVentana
+            })
         }
 
-        // Crear nueva
+        // Verificar límite diario de valoraciones nuevas (5 por día)
+        const inicioDelDia = new Date(); inicioDelDia.setHours(0, 0, 0, 0)
+        const finDelDia = new Date(); finDelDia.setHours(23, 59, 59, 999)
+        const valoracionesHoy = await Valoracion.countDocuments({
+            usuario: req.userBDD._id,
+            createdAt: { $gte: inicioDelDia, $lte: finDelDia }
+        })
+        if (valoracionesHoy >= LIMITE_DIARIO) {
+            return res.status(429).json({
+                msg: `Has alcanzado el límite de ${LIMITE_DIARIO} valoraciones nuevas por día. Inténtalo mañana.`
+            })
+        }
+
+        // Crear nueva valoración
         const valoracion = new Valoracion({
             vehiculo: vehiculoId,
             usuario: req.userBDD._id,
             aspectos,
-            comentario: comentario?.trim()?.slice(0, 500) || ""
+            comentario: comentario?.trim()?.slice(0, 500) || "",
+            edicionesEnVentana: 0
         })
         await valoracion.save()
         res.status(201).json({ msg: "Valoración registrada correctamente", valoracion })
@@ -93,7 +155,7 @@ export const obtenerValoracionesVehiculo = async (req, res) => {
         const skip = (pagina - 1) * limite
 
         const vehiculo = await Vehiculo.findById(vehiculoId)
-            .select("marca modelo anio tipo combustible fotos")
+            .select("marca modelo anio tipo combustible fotos version enlaces ocultarFotoAuto")
         if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
 
         const total = await Valoracion.countDocuments({ vehiculo: vehiculoId })
@@ -110,7 +172,9 @@ export const obtenerValoracionesVehiculo = async (req, res) => {
         // Si el usuario está logueado, ver si ya valoró
         let miValoracion = null
         let puedoValorar = true
-        let diasRestantes = 0
+        let enVentanaCorreccion = false
+        let horasRestantesVentana = 0
+        let diasRestantesCooldown = 0
 
         if (req.userBDD) {
             miValoracion = await Valoracion.findOne({
@@ -118,9 +182,11 @@ export const obtenerValoracionesVehiculo = async (req, res) => {
                 usuario: req.userBDD._id
             })
             if (miValoracion) {
-                const dias = (new Date() - new Date(miValoracion.updatedAt)) / (1000 * 60 * 60 * 24)
-                puedoValorar = dias >= DIAS_EDICION
-                diasRestantes = puedoValorar ? 0 : Math.ceil(DIAS_EDICION - dias)
+                const estado = calcularEstadoEdicion(miValoracion)
+                puedoValorar = estado.puedeEditar
+                enVentanaCorreccion = estado.enVentanaCorreccion
+                horasRestantesVentana = estado.horasRestantesVentana
+                diasRestantesCooldown = estado.diasRestantesCooldown
             }
         }
 
@@ -133,7 +199,9 @@ export const obtenerValoracionesVehiculo = async (req, res) => {
             valoraciones,
             miValoracion,
             puedoValorar,
-            diasRestantes
+            enVentanaCorreccion,
+            horasRestantesVentana,
+            diasRestantesCooldown
         })
     } catch (error) {
         console.error(error)
@@ -210,6 +278,32 @@ export const rankingConfiabilidad = async (req, res) => {
     } catch (error) {
         console.error(error)
         res.status(500).json({ msg: "Error al obtener el ranking" })
+    }
+}
+
+// VALORACIONES DE UN USUARIO (admin)
+export const valoracionesDeUsuario = async (req, res) => {
+    try {
+        const pagina = parseInt(req.query.pagina) || 1
+        const limite = 10
+        const skip = (pagina - 1) * limite
+
+        const total = await Valoracion.countDocuments({ usuario: req.params.id })
+        const valoraciones = await Valoracion.find({ usuario: req.params.id })
+            .populate("vehiculo", "marca modelo anio version")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limite)
+
+        res.status(200).json({
+            valoraciones,
+            total,
+            paginas: Math.ceil(total / limite),
+            paginaActual: pagina
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al obtener valoraciones del usuario" })
     }
 }
 

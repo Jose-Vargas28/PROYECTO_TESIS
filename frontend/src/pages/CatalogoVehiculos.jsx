@@ -207,6 +207,7 @@ const CatalogoVehiculos = () => {
     const [filtroTipo, setFiltroTipo] = useState("")
     const [filtroMarca, setFiltroMarca] = useState("")
     const [ordenPor, setOrdenPor] = useState("marca")
+    const [filtroReportes, setFiltroReportes] = useState("")
     const [cargando, setCargando] = useState(true)
     const [pagina, setPagina] = useState(1)
     const [totalPaginas, setTotalPaginas] = useState(1)
@@ -255,15 +256,22 @@ const CatalogoVehiculos = () => {
     }, [filtroTipo, filtroMarca])
 
     // Ordenamiento en frontend (los datos ya vienen filtrados del backend)
-    const vehiculosOrdenados = [...vehiculos].sort((a, b) => {
-        if (ordenPor === "marca") return `${a.marca} ${a.modelo}`.localeCompare(`${b.marca} ${b.modelo}`)
-        if (ordenPor === "anio_desc") return b.anio - a.anio
-        if (ordenPor === "anio_asc") return a.anio - b.anio
-        if (ordenPor === "reportes") return (b.totalReportes || 0) - (a.totalReportes || 0)
-        return 0
-    })
+    const vehiculosOrdenados = [...vehiculos]
+        .filter(v => {
+            if (filtroReportes === "con") return (v.totalReportes || 0) > 0
+            if (filtroReportes === "sin") return (v.totalReportes || 0) === 0
+            return true
+        })
+        .sort((a, b) => {
+            if (ordenPor === "marca") return `${a.marca} ${a.modelo}`.localeCompare(`${b.marca} ${b.modelo}`)
+            if (ordenPor === "anio_desc") return b.anio - a.anio
+            if (ordenPor === "anio_asc") return a.anio - b.anio
+            if (ordenPor === "reportes") return (b.totalReportes || 0) - (a.totalReportes || 0)
+            if (ordenPor === "reportes_asc") return (a.totalReportes || 0) - (b.totalReportes || 0)
+            return 0
+        })
 
-    const hayFiltros = filtroTipo || filtroMarca || busqueda || ordenPor !== "marca"
+    const hayFiltros = filtroTipo || filtroMarca || busqueda || ordenPor !== "marca" || filtroReportes
     const cambiarPagina = (p) => { setPagina(p); cargar(p, busqueda, filtroTipo, filtroMarca) }
     const abrirGestionFotos = async (v) => {
         setVehiculoFotos({ ...v })
@@ -384,6 +392,7 @@ const CatalogoVehiculos = () => {
 
             {/* Filtros */}
             <div className="bg-white rounded-xl shadow p-4 mb-6 space-y-3">
+                {/* Fila 1 — búsqueda, tipo, marca */}
                 <div className="flex flex-wrap gap-3">
                     <input type="text" placeholder="Buscar por marca o modelo..."
                         className="flex-1 min-w-48 rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm"
@@ -398,22 +407,56 @@ const CatalogoVehiculos = () => {
                         <option value="">Todas las marcas</option>
                         {marcasDisponibles.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
-                    <select className="rounded-md border border-slate-300 py-2 px-3 text-slate-700 text-sm"
-                        value={ordenPor} onChange={e => setOrdenPor(e.target.value)}>
-                        <option value="marca">Ordenar: A-Z</option>
-                        <option value="anio_desc">Año: más nuevo</option>
-                        <option value="anio_asc">Año: más antiguo</option>
-                        <option value="reportes">Más reportes</option>
-                    </select>
                 </div>
-                {hayFiltros && (
-                    <button type="button"
-                        onClick={() => { setFiltroTipo(""); setFiltroMarca(""); setOrdenPor("marca") }}
-                        className="text-sm text-slate-500 hover:underline">
-                        Limpiar filtros
-                    </button>
-                )}
-                <p className="text-xs text-slate-400">{total} vehículo(s) encontrado(s)</p>
+                {/* Fila 2 — ordenamiento y clasificación rápida */}
+                <div className="flex flex-wrap gap-3 items-center">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 font-semibold whitespace-nowrap">Ordenar por:</span>
+                        <select className="rounded-md border border-slate-300 py-1.5 px-3 text-slate-700 text-sm"
+                            value={ordenPor} onChange={e => setOrdenPor(e.target.value)}>
+                            <option value="marca">A-Z</option>
+                            <option value="anio_desc">Año: más nuevo</option>
+                            <option value="anio_asc">Año: más antiguo</option>
+                            <option value="reportes">Más reportes</option>
+                            <option value="reportes_asc">Menos reportes</option>
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 font-semibold whitespace-nowrap">Mostrar:</span>
+                        <div className="flex gap-1">
+                            {[
+                                { value: "",          label: "Todos" },
+                                { value: "con",       label: "Con reportes" },
+                                { value: "sin",       label: "Sin reportes" },
+                            ].map(op => (
+                                <button key={op.value} type="button"
+                                    onClick={() => { setFiltroReportes(op.value); setPagina(1) }}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                                        filtroReportes === op.value
+                                            ? "bg-blue-900 text-white"
+                                            : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                                    }`}>
+                                    {op.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    {hayFiltros && (
+                        <button type="button"
+                            onClick={() => { setFiltroTipo(""); setFiltroMarca(""); setBusqueda(""); setOrdenPor("marca"); setFiltroReportes("") }}
+                            className="text-sm text-slate-500 hover:underline ml-auto">
+                            Limpiar filtros
+                        </button>
+                    )}
+                </div>
+                <p className="text-xs text-slate-400">
+                    {vehiculosOrdenados.length} vehículo(s) · ordenado por <strong>
+                        {ordenPor === "marca" ? "A-Z" :
+                         ordenPor === "anio_desc" ? "año más nuevo" :
+                         ordenPor === "anio_asc" ? "año más antiguo" :
+                         ordenPor === "reportes" ? "más reportes" : "menos reportes"}
+                    </strong>
+                </p>
             </div>
 
             {cargando ? (

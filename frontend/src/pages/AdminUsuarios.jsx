@@ -50,6 +50,14 @@ const AdminUsuarios = () => {
     // Modal detalle usuario
     const [modalDetalle, setModalDetalle] = useState(null)
 
+    // Pestaña del modal reportes/valoraciones
+    const [pestanaModal, setPestanaModal] = useState("reportes")
+    const [valoracionesUsuario, setValoracionesUsuario] = useState([])
+    const [cargandoValoraciones, setCargandoValoraciones] = useState(false)
+    const [paginaValoraciones, setPaginaValoraciones] = useState(1)
+    const [totalPaginasValoraciones, setTotalPaginasValoraciones] = useState(1)
+    const [totalValoraciones, setTotalValoraciones] = useState(0)
+
     const authHeaders = () => ({ headers: { Authorization: `Bearer ${token}` } })
 
     const cargarActivos = useCallback(async (pag = 1, busq = "", region = "", provincia = "", minR = "", maxR = "") => {
@@ -124,11 +132,28 @@ const AdminUsuarios = () => {
         return () => clearTimeout(t)
     }, [busquedaReportes])
 
+    const cargarValoracionesUsuario = useCallback(async (usuarioId, pag = 1) => {
+        setCargandoValoraciones(true)
+        try {
+            const res = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/usuarios/${usuarioId}/valoraciones?pagina=${pag}`,
+                authHeaders()
+            )
+            setValoracionesUsuario(res.data.valoraciones || [])
+            setTotalPaginasValoraciones(res.data.paginas || 1)
+            setTotalValoraciones(res.data.total || 0)
+        } catch (error) { console.error(error); setValoracionesUsuario([]) }
+        setCargandoValoraciones(false)
+    }, [token])
+
     const abrirModalReportes = (usuario) => {
         setModalReportes(usuario)
+        setPestanaModal("reportes")
         setBusquedaReportes("")
         setPaginaReportes(1)
+        setPaginaValoraciones(1)
         cargarReportesUsuario(usuario._id, 1, "")
+        cargarValoracionesUsuario(usuario._id, 1)
     }
 
     const limpiarFiltros = () => {
@@ -386,72 +411,154 @@ const AdminUsuarios = () => {
                 </>
             )}
 
-            {/* MODAL REPORTES DEL USUARIO */}
+            {/* MODAL REPORTES Y VALORACIONES DEL USUARIO */}
             {modalReportes && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
                         {/* Header */}
                         <div className="flex items-center justify-between p-5 border-b border-slate-200 shrink-0">
                             <div>
-                                <h3 className="font-bold text-slate-800 text-lg">Reportes de {modalReportes.nombre}</h3>
-                                <p className="text-xs text-slate-400 mt-0.5">{modalReportes.email} · {totalReportes} reporte(s) en total</p>
+                                <h3 className="font-bold text-slate-800 text-lg">{modalReportes.nombre}</h3>
+                                <p className="text-xs text-slate-400 mt-0.5">{modalReportes.email}</p>
                             </div>
                             <button type="button" onClick={() => setModalReportes(null)}
                                 className="text-slate-400 hover:text-slate-600 text-xl font-bold">×</button>
                         </div>
 
-                        {/* Buscador */}
-                        <div className="px-5 pt-4 shrink-0">
-                            <input type="text" placeholder="Buscar por marca, modelo o falla..."
-                                className="w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm"
-                                value={busquedaReportes} onChange={(e) => setBusquedaReportes(e.target.value)} />
+                        {/* Pestañas */}
+                        <div className="flex border-b border-slate-200 shrink-0 px-5">
+                            <button type="button"
+                                onClick={() => setPestanaModal("reportes")}
+                                className={`py-2.5 px-4 text-sm font-semibold border-b-2 transition-colors ${pestanaModal === "reportes" ? "border-blue-900 text-blue-900" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+                                Reportes <span className="ml-1 text-xs bg-slate-100 px-1.5 py-0.5 rounded-full">{totalReportes}</span>
+                            </button>
+                            <button type="button"
+                                onClick={() => setPestanaModal("valoraciones")}
+                                className={`py-2.5 px-4 text-sm font-semibold border-b-2 transition-colors ${pestanaModal === "valoraciones" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+                                Valoraciones <span className="ml-1 text-xs bg-slate-100 px-1.5 py-0.5 rounded-full">{totalValoraciones}</span>
+                            </button>
                         </div>
 
-                        {/* Lista de reportes */}
-                        <div className="flex-1 overflow-y-auto p-5 space-y-2">
-                            {cargandoReportes ? (
-                                <p className="text-slate-400 text-sm text-center py-8">Cargando reportes...</p>
-                            ) : reportesUsuario.length === 0 ? (
-                                <div className="bg-slate-50 rounded-lg p-8 text-center text-slate-400 text-sm">
-                                    {busquedaReportes ? "No hay reportes que coincidan." : "Este usuario no tiene reportes."}
+                        {/* Contenido según pestaña */}
+                        {pestanaModal === "reportes" ? (
+                            <>
+                                <div className="px-5 pt-4 shrink-0">
+                                    <input type="text" placeholder="Buscar por marca, modelo o falla..."
+                                        className="w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm"
+                                        value={busquedaReportes} onChange={(e) => setBusquedaReportes(e.target.value)} />
                                 </div>
-                            ) : (
-                                reportesUsuario.map(r => {
-                                    const estado = estadoReporte(r)
-                                    return (
-                                        <div key={r._id} className="bg-slate-50 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                    <span className="font-semibold text-slate-800 text-sm">
-                                                        {r.vehiculo?.marca} {r.vehiculo?.modelo} {r.vehiculo?.anio}
-                                                    </span>
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${estado.clase}`}>
-                                                        {estado.label}
-                                                    </span>
-                                                    <Badge tipo={r.gravedad} />
-                                                </div>
-                                                <p className="text-xs text-slate-500">{r.falla?.nombre}</p>
-                                                <p className="text-xs text-slate-400 mt-0.5">
-                                                    {new Date(r.createdAt).toLocaleDateString("es-EC", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                                                </p>
-                                            </div>
-                                            <button type="button"
-                                                onClick={() => { setModalReportes(null); navigate(`/dashboard/reporte/${r._id}`) }}
-                                                className="shrink-0 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
-                                                Ver
-                                            </button>
+                                <div className="flex-1 overflow-y-auto p-5 space-y-2">
+                                    {cargandoReportes ? (
+                                        <p className="text-slate-400 text-sm text-center py-8">Cargando reportes...</p>
+                                    ) : reportesUsuario.length === 0 ? (
+                                        <div className="bg-slate-50 rounded-lg p-8 text-center text-slate-400 text-sm">
+                                            {busquedaReportes ? "No hay reportes que coincidan." : "Este usuario no tiene reportes."}
                                         </div>
-                                    )
-                                })
-                            )}
-                        </div>
-
-                        {/* Paginación */}
-                        {totalPaginasReportes > 1 && (
-                            <div className="shrink-0 border-t border-slate-200 px-5 py-3">
-                                <Paginacion paginaActual={paginaReportes} totalPaginas={totalPaginasReportes}
-                                    onCambiar={(p) => { setPaginaReportes(p); cargarReportesUsuario(modalReportes._id, p, busquedaReportes) }} />
-                            </div>
+                                    ) : (
+                                        reportesUsuario.map(r => {
+                                            const estado = estadoReporte(r)
+                                            return (
+                                                <div key={r._id} className="bg-slate-50 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                            <span className="font-semibold text-slate-800 text-sm">
+                                                                {r.vehiculo?.marca} {r.vehiculo?.modelo} {r.vehiculo?.anio}
+                                                            </span>
+                                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${estado.clase}`}>
+                                                                {estado.label}
+                                                            </span>
+                                                            <Badge tipo={r.gravedad} />
+                                                        </div>
+                                                        <p className="text-xs text-slate-500">{r.falla?.nombre}</p>
+                                                        <p className="text-xs text-slate-400 mt-0.5">
+                                                            {new Date(r.createdAt).toLocaleString("es-EC", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                        </p>
+                                                    </div>
+                                                    <button type="button"
+                                                        onClick={() => { setModalReportes(null); navigate(`/dashboard/reporte/${r._id}`) }}
+                                                        className="shrink-0 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                                        Ver
+                                                    </button>
+                                                </div>
+                                            )
+                                        })
+                                    )}
+                                </div>
+                                {totalPaginasReportes > 1 && (
+                                    <div className="shrink-0 border-t border-slate-200 px-5 py-3">
+                                        <Paginacion paginaActual={paginaReportes} totalPaginas={totalPaginasReportes}
+                                            onCambiar={(p) => { setPaginaReportes(p); cargarReportesUsuario(modalReportes._id, p, busquedaReportes) }} />
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex-1 overflow-y-auto p-5 space-y-2">
+                                    {cargandoValoraciones ? (
+                                        <p className="text-slate-400 text-sm text-center py-8">Cargando valoraciones...</p>
+                                    ) : valoracionesUsuario.length === 0 ? (
+                                        <div className="bg-slate-50 rounded-lg p-8 text-center text-slate-400 text-sm">
+                                            Este usuario no ha hecho valoraciones.
+                                        </div>
+                                    ) : (
+                                        valoracionesUsuario.map(v => {
+                                            const prom = v.aspectos ? Math.round((Object.values(v.aspectos).reduce((a, b) => a + b, 0) / 7) * 10) / 10 : 0
+                                            return (
+                                                <div key={v._id} className="bg-slate-50 rounded-lg px-4 py-3">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <p className="font-semibold text-slate-800 text-sm">
+                                                                {v.vehiculo?.marca} {v.vehiculo?.modelo} {v.vehiculo?.anio}
+                                                                {v.vehiculo?.version && <span className="text-xs text-slate-400 ml-1">({v.vehiculo.version})</span>}
+                                                            </p>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <div className="flex gap-0.5">
+                                                                    {[1,2,3,4,5].map(i => (
+                                                                        <span key={i} className={`text-sm ${i <= Math.round(prom) ? "text-amber-400" : "text-slate-200"}`}>★</span>
+                                                                    ))}
+                                                                </div>
+                                                                <span className="text-xs font-bold text-slate-600">{prom}/5</span>
+                                                            </div>
+                                                            {v.comentario && (
+                                                                <p className="text-xs text-slate-500 mt-1 italic">"{v.comentario}"</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-right shrink-0">
+                                                            <p className="text-xs text-slate-400">
+                                                                Creada: {new Date(v.createdAt).toLocaleString("es-EC", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                            </p>
+                                                            {v.updatedAt !== v.createdAt && (
+                                                                <p className="text-xs text-amber-500 mt-0.5">
+                                                                    Editada: {new Date(v.updatedAt).toLocaleString("es-EC", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                                </p>
+                                                            )}
+                                                            {v.edicionesEnVentana > 0 && (
+                                                                <p className="text-xs text-slate-300 mt-0.5">
+                                                                    {v.edicionesEnVentana} edición(es) en ventana de 48h
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {/* Desglose de aspectos */}
+                                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                                        {v.aspectos && Object.entries(v.aspectos).map(([key, val]) => (
+                                                            <span key={key} className={`text-xs px-2 py-0.5 rounded-full border ${val >= 4 ? "bg-green-50 border-green-200 text-green-700" : val >= 3 ? "bg-slate-50 border-slate-200 text-slate-500" : "bg-red-50 border-red-200 text-red-600"}`}>
+                                                                {key}: {val}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })
+                                    )}
+                                </div>
+                                {totalPaginasValoraciones > 1 && (
+                                    <div className="shrink-0 border-t border-slate-200 px-5 py-3">
+                                        <Paginacion paginaActual={paginaValoraciones} totalPaginas={totalPaginasValoraciones}
+                                            onCambiar={(p) => { setPaginaValoraciones(p); cargarValoracionesUsuario(modalReportes._id, p) }} />
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

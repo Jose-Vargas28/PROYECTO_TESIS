@@ -1,5 +1,12 @@
 import { Schema, model } from "mongoose"
 
+const enlaceSchema = new Schema({
+    url:         { type: String, required: true, trim: true },
+    titulo:      { type: String, required: true, trim: true, maxlength: 100 },
+    descripcion: { type: String, trim: true, maxlength: 200, default: "" },
+    creadoPor:   { type: Schema.Types.ObjectId, ref: "User" }
+}, { _id: true, timestamps: true })
+
 const fotoSchema = new Schema({
     url: { type: String, required: true },
     publicId: { type: String, required: true },
@@ -29,6 +36,7 @@ const vehiculoSchema = new Schema({
         default: "gasolina"
     },
     fotos: [fotoSchema],
+    enlaces: [enlaceSchema],
     ocultarFotoAuto: { type: Boolean, default: false },
     creadoPor: {
         type: Schema.Types.ObjectId,

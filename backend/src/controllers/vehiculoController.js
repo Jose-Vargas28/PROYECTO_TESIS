@@ -299,6 +299,64 @@ export const guardarFotoPexels = async (req, res) => {
     }
 }
 
+// AGREGAR ENLACE DE SEGURIDAD (usuario logueado)
+export const agregarEnlace = async (req, res) => {
+    try {
+        const vehiculo = await Vehiculo.findById(req.params.id)
+        if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
+
+        if (vehiculo.enlaces.length >= 10) {
+            return res.status(400).json({ msg: "Este vehículo ya tiene el máximo de 10 enlaces" })
+        }
+
+        const { url, titulo, descripcion } = req.body
+        if (!url || !titulo) return res.status(400).json({ msg: "URL y título son obligatorios" })
+
+        // Validar que la URL no esté duplicada
+        const existe = vehiculo.enlaces.find(e => e.url === url.trim())
+        if (existe) return res.status(400).json({ msg: "Este enlace ya fue registrado" })
+
+        vehiculo.enlaces.push({
+            url: url.trim(),
+            titulo: titulo.trim().slice(0, 100),
+            descripcion: (descripcion || "").trim().slice(0, 200),
+            creadoPor: req.userBDD._id
+        })
+        await vehiculo.save()
+
+        res.status(201).json({ msg: "Enlace agregado correctamente", enlaces: vehiculo.enlaces })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al agregar el enlace" })
+    }
+}
+
+// ELIMINAR ENLACE (propio o admin)
+export const eliminarEnlace = async (req, res) => {
+    try {
+        const vehiculo = await Vehiculo.findById(req.params.id)
+        if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
+
+        const enlace = vehiculo.enlaces.id(req.params.enlaceId)
+        if (!enlace) return res.status(404).json({ msg: "Enlace no encontrado" })
+
+        // Solo el creador o el admin puede eliminar
+        const esAdmin = req.userBDD.rol === "admin"
+        const esPropietario = enlace.creadoPor?.toString() === req.userBDD._id.toString()
+        if (!esAdmin && !esPropietario) {
+            return res.status(403).json({ msg: "No tienes permiso para eliminar este enlace" })
+        }
+
+        enlace.deleteOne()
+        await vehiculo.save()
+
+        res.status(200).json({ msg: "Enlace eliminado", enlaces: vehiculo.enlaces })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al eliminar el enlace" })
+    }
+}
+
 // OCULTAR / MOSTRAR FOTO AUTOMÁTICA (solo admin)
 export const toggleFotoAuto = async (req, res) => {
     try {

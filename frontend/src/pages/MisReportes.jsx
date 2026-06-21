@@ -126,6 +126,15 @@ const MisReportes = () => {
                                                 👁 Ver detalle
                                             </button>
                                         )}
+                                        {/* Botón valorar vehículo — siempre visible si hay vehiculo */}
+                                        {r.vehiculo?._id && (
+                                            <button type="button"
+                                                onClick={() => navigate(`/dashboard/confiabilidad/${r.vehiculo._id}`)}
+                                                className="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                                title="Ir a valorar este vehículo en Confiabilidad">
+                                                ⭐ Valorar
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 

@@ -2,6 +2,7 @@ import axios from "axios"
 
 
 //  SERVICIO DE REPORTES
+//  Centraliza las llamadas a los endpoints de reportes.
 
 
 const API = import.meta.env.VITE_BACKEND_URL

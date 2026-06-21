@@ -25,6 +25,10 @@ const valoracionSchema = new Schema({
         trim: true,
         maxlength: 500,
         default: ""
+    },
+    edicionesEnVentana: {
+        type: Number,
+        default: 0
     }
 }, {
     timestamps: true
