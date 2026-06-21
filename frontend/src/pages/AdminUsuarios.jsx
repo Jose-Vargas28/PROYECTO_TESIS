@@ -47,6 +47,9 @@ const AdminUsuarios = () => {
     const [totalPaginasReportes, setTotalPaginasReportes] = useState(1)
     const [totalReportes, setTotalReportes] = useState(0)
 
+    // Modal detalle usuario
+    const [modalDetalle, setModalDetalle] = useState(null)
+
     const authHeaders = () => ({ headers: { Authorization: `Bearer ${token}` } })
 
     const cargarActivos = useCallback(async (pag = 1, busq = "", region = "", provincia = "", minR = "", maxR = "") => {
@@ -270,7 +273,7 @@ const AdminUsuarios = () => {
                                         {usuarios.map((u, i) => (
                                             <tr key={u._id} className={`${i % 2 === 0 ? "bg-white" : "bg-slate-50"} ${u.baneado ? "opacity-60" : ""}`}>
                                                 <td className="p-3">
-                                                    <button type="button" onClick={() => setUsuarioDetalle(usuarioDetalle?._id === u._id ? null : u)}
+                                                    <button type="button" onClick={() => setModalDetalle(u)}
                                                         className="font-semibold text-blue-700 hover:underline text-left">
                                                         {u.nombre}
                                                     </button>
@@ -310,9 +313,9 @@ const AdminUsuarios = () => {
                                                         </div>
                                                     ) : (
                                                         <div className="flex gap-2">
-                                                            <button type="button" onClick={() => setUsuarioDetalle(usuarioDetalle?._id === u._id ? null : u)}
+                                                            <button type="button" onClick={() => setModalDetalle(u)}
                                                                 className="text-blue-700 hover:underline text-xs">
-                                                                {usuarioDetalle?._id === u._id ? "Ocultar" : "Ver datos"}
+                                                                Ver datos
                                                             </button>
                                                             <button type="button" onClick={() => abrirModalReportes(u)}
                                                                 className="text-slate-500 hover:underline text-xs">
@@ -326,35 +329,6 @@ const AdminUsuarios = () => {
                                     </tbody>
                                 </table>
                             </div>
-
-                            {/* Panel de detalle del usuario */}
-                            {usuarioDetalle && (
-                                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-5">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <h3 className="font-bold text-blue-900 text-lg">Datos de {usuarioDetalle.nombre}</h3>
-                                        <button type="button" onClick={() => setUsuarioDetalle(null)} className="text-slate-400 hover:text-slate-600 text-sm">Cerrar ×</button>
-                                    </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                        <div><p className="text-slate-400 text-xs">Nombre</p><p className="font-semibold text-slate-700">{usuarioDetalle.nombre}</p></div>
-                                        <div><p className="text-slate-400 text-xs">Correo</p><p className="font-semibold text-slate-700">{usuarioDetalle.email}</p></div>
-                                        <div><p className="text-slate-400 text-xs">Teléfono</p><p className="font-semibold text-slate-700">{usuarioDetalle.telefono || <span className="text-slate-400 italic font-normal">No registrado</span>}</p></div>
-                                        <div><p className="text-slate-400 text-xs">Región</p><p className="font-semibold text-slate-700">{usuarioDetalle.region || <span className="text-slate-400 italic font-normal">No registrada</span>}</p></div>
-                                        <div><p className="text-slate-400 text-xs">Provincia</p><p className="font-semibold text-slate-700">{usuarioDetalle.provincia || <span className="text-slate-400 italic font-normal">No registrada</span>}</p></div>
-                                        <div><p className="text-slate-400 text-xs">Registro</p><p className="font-semibold text-slate-700">{formatearFecha(usuarioDetalle.createdAt)}</p></div>
-                                        <div><p className="text-slate-400 text-xs">Total reportes</p><p className="font-bold text-blue-900 text-lg">{usuarioDetalle.totalReportes}</p></div>
-                                        <div><p className="text-slate-400 text-xs">Reportes validados</p><p className="font-bold text-green-600 text-lg">{usuarioDetalle.reportesVerificados}</p></div>
-                                        <div><p className="text-slate-400 text-xs">Estado</p>
-                                            <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${usuarioDetalle.baneado ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}`}>
-                                                {usuarioDetalle.baneado ? "Suspendido" : "Activo"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <button type="button" onClick={() => abrirModalReportes(usuarioDetalle)}
-                                        className="mt-4 bg-blue-900 hover:bg-blue-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-                                        📋 Ver reportes de {usuarioDetalle.nombre}
-                                    </button>
-                                </div>
-                            )}
 
                             <Paginacion paginaActual={paginaActivos} totalPaginas={totalPaginasActivos}
                                 onCambiar={(p) => { setPaginaActivos(p); cargarActivos(p, busqueda, filtroRegion, filtroProvincia, filtroMinReportes, filtroMaxReportes) }} />
@@ -492,6 +466,47 @@ const AdminUsuarios = () => {
                     onConfirmar={ejecutarAccion}
                     onCancelar={() => setModalAccion(null)}
                 />
+            )}
+
+            {/* Modal detalle usuario */}
+            {modalDetalle && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+                        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+                            <h3 className="font-bold text-slate-800 text-lg">Datos del usuario</h3>
+                            <button type="button" onClick={() => setModalDetalle(null)}
+                                className="text-slate-400 hover:text-slate-600 text-xl font-bold">×</button>
+                        </div>
+                        <div className="p-5">
+                            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                <div className="col-span-2"><p className="text-xs text-slate-400">Nombre</p><p className="font-semibold text-slate-700">{modalDetalle.nombre}</p></div>
+                                <div className="col-span-2"><p className="text-xs text-slate-400">Correo</p><p className="font-semibold text-slate-700">{modalDetalle.email}</p></div>
+                                <div><p className="text-xs text-slate-400">Teléfono</p><p className="font-semibold text-slate-700">{modalDetalle.telefono || <span className="text-slate-400 italic font-normal text-xs">No registrado</span>}</p></div>
+                                <div><p className="text-xs text-slate-400">Registro</p><p className="font-semibold text-slate-700">{formatearFecha(modalDetalle.createdAt)}</p></div>
+                                <div><p className="text-xs text-slate-400">Región</p><p className="font-semibold text-slate-700">{modalDetalle.region || <span className="text-slate-400 italic font-normal text-xs">No registrada</span>}</p></div>
+                                <div><p className="text-xs text-slate-400">Provincia</p><p className="font-semibold text-slate-700">{modalDetalle.provincia || <span className="text-slate-400 italic font-normal text-xs">No registrada</span>}</p></div>
+                                <div><p className="text-xs text-slate-400">Total reportes</p><p className="font-bold text-blue-900 text-2xl">{modalDetalle.totalReportes}</p></div>
+                                <div><p className="text-xs text-slate-400">Validados</p><p className="font-bold text-green-600 text-2xl">{modalDetalle.reportesVerificados}</p></div>
+                                <div><p className="text-xs text-slate-400">Estado</p>
+                                    <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${modalDetalle.baneado ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}`}>
+                                        {modalDetalle.baneado ? "Suspendido" : "Activo"}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex gap-3">
+                                <button type="button"
+                                    onClick={() => { setModalDetalle(null); abrirModalReportes(modalDetalle) }}
+                                    className="flex-1 bg-blue-900 hover:bg-blue-800 text-white text-sm font-semibold py-2 rounded-lg transition-colors">
+                                    📋 Ver reportes
+                                </button>
+                                <button type="button" onClick={() => setModalDetalle(null)}
+                                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold py-2 rounded-lg transition-colors">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )

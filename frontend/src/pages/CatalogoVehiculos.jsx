@@ -193,6 +193,8 @@ const Lightbox = ({ fotos, indiceInicial, onCerrar }) => {
     )
 }
 
+const TIPOS_VEHICULO = ["automóvil", "suv", "camioneta", "moto", "vehículo comercial"]
+
 // ---- Página principal ----
 const CatalogoVehiculos = () => {
     const navigate = useNavigate()
@@ -200,28 +202,30 @@ const CatalogoVehiculos = () => {
     const esAdmin = rol === "admin"
 
     const [vehiculos, setVehiculos] = useState([])
+    const [marcasDisponibles, setMarcasDisponibles] = useState([])
     const [busqueda, setBusqueda] = useState("")
+    const [filtroTipo, setFiltroTipo] = useState("")
+    const [filtroMarca, setFiltroMarca] = useState("")
+    const [ordenPor, setOrdenPor] = useState("marca")
     const [cargando, setCargando] = useState(true)
     const [pagina, setPagina] = useState(1)
     const [totalPaginas, setTotalPaginas] = useState(1)
     const [total, setTotal] = useState(0)
     const [modoEdicion, setModoEdicion] = useState(false)
 
-    // Lightbox
-    const [lightbox, setLightbox] = useState(null) // { fotos, idx }
-
-    // Modal gestión fotos
+    const [lightbox, setLightbox] = useState(null)
     const [vehiculoFotos, setVehiculoFotos] = useState(null)
     const [subiendo, setSubiendo] = useState(false)
     const [guardandoPexels, setGuardandoPexels] = useState(null)
     const [modalEliminarFoto, setModalEliminarFoto] = useState(null)
     const inputFotoRef = useRef(null)
 
-    const cargar = useCallback(async (pag = 1, busq = "") => {
+    const cargar = useCallback(async (pag = 1, busq = "", tipo = "", marca = "") => {
         setCargando(true)
         try {
-            const res = await getVehiculos(pag, busq)
-            setVehiculos(res.data.vehiculos || [])
+            const res = await getVehiculos(pag, busq, tipo, marca)
+            const lista = res.data.vehiculos || []
+            setVehiculos(lista)
             setTotalPaginas(res.data.paginas || 1)
             setTotal(res.data.total || 0)
         } catch (error) {
@@ -231,13 +235,36 @@ const CatalogoVehiculos = () => {
         setCargando(false)
     }, [])
 
-    useEffect(() => { cargar() }, [])
+    // Cargar marcas al inicio con límite alto para tenerlas todas
     useEffect(() => {
-        const t = setTimeout(() => { setPagina(1); cargar(1, busqueda) }, 400)
+        getVehiculos(1, "", "", "", 500).then(res => {
+            setMarcasDisponibles([...new Set((res.data.vehiculos || []).map(v => v.marca))].sort())
+        }).catch(() => {})
+        cargar()
+    }, [])
+
+    // Debounce en búsqueda
+    useEffect(() => {
+        const t = setTimeout(() => { setPagina(1); cargar(1, busqueda, filtroTipo, filtroMarca) }, 400)
         return () => clearTimeout(t)
     }, [busqueda])
 
-    const cambiarPagina = (p) => { setPagina(p); cargar(p, busqueda) }
+    // Filtros inmediatos
+    useEffect(() => {
+        setPagina(1); cargar(1, busqueda, filtroTipo, filtroMarca)
+    }, [filtroTipo, filtroMarca])
+
+    // Ordenamiento en frontend (los datos ya vienen filtrados del backend)
+    const vehiculosOrdenados = [...vehiculos].sort((a, b) => {
+        if (ordenPor === "marca") return `${a.marca} ${a.modelo}`.localeCompare(`${b.marca} ${b.modelo}`)
+        if (ordenPor === "anio_desc") return b.anio - a.anio
+        if (ordenPor === "anio_asc") return a.anio - b.anio
+        if (ordenPor === "reportes") return (b.totalReportes || 0) - (a.totalReportes || 0)
+        return 0
+    })
+
+    const hayFiltros = filtroTipo || filtroMarca || busqueda || ordenPor !== "marca"
+    const cambiarPagina = (p) => { setPagina(p); cargar(p, busqueda, filtroTipo, filtroMarca) }
     const abrirGestionFotos = async (v) => {
         setVehiculoFotos({ ...v })
         if (!v.ocultarFotoAuto) {
@@ -355,14 +382,38 @@ const CatalogoVehiculos = () => {
                 </div>
             )}
 
-            <div className="flex gap-3 mb-6">
-                <input type="text" placeholder="Buscar por marca o modelo..."
-                    className="flex-1 rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
-                    value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
-                {busqueda && (
-                    <button type="button" onClick={() => setBusqueda("")}
-                        className="px-3 py-2 text-sm text-slate-500 hover:underline">Limpiar</button>
+            {/* Filtros */}
+            <div className="bg-white rounded-xl shadow p-4 mb-6 space-y-3">
+                <div className="flex flex-wrap gap-3">
+                    <input type="text" placeholder="Buscar por marca o modelo..."
+                        className="flex-1 min-w-48 rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 text-sm"
+                        value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+                    <select className="rounded-md border border-slate-300 py-2 px-3 text-slate-700 text-sm"
+                        value={filtroTipo} onChange={e => { setFiltroTipo(e.target.value); setPagina(1) }}>
+                        <option value="">Todos los tipos</option>
+                        {TIPOS_VEHICULO.map(t => <option key={t} value={t} className="capitalize">{t}</option>)}
+                    </select>
+                    <select className="rounded-md border border-slate-300 py-2 px-3 text-slate-700 text-sm"
+                        value={filtroMarca} onChange={e => { setFiltroMarca(e.target.value); setPagina(1) }}>
+                        <option value="">Todas las marcas</option>
+                        {marcasDisponibles.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <select className="rounded-md border border-slate-300 py-2 px-3 text-slate-700 text-sm"
+                        value={ordenPor} onChange={e => setOrdenPor(e.target.value)}>
+                        <option value="marca">Ordenar: A-Z</option>
+                        <option value="anio_desc">Año: más nuevo</option>
+                        <option value="anio_asc">Año: más antiguo</option>
+                        <option value="reportes">Más reportes</option>
+                    </select>
+                </div>
+                {hayFiltros && (
+                    <button type="button"
+                        onClick={() => { setFiltroTipo(""); setFiltroMarca(""); setOrdenPor("marca") }}
+                        className="text-sm text-slate-500 hover:underline">
+                        Limpiar filtros
+                    </button>
                 )}
+                <p className="text-xs text-slate-400">{total} vehículo(s) encontrado(s)</p>
             </div>
 
             {cargando ? (
@@ -374,7 +425,7 @@ const CatalogoVehiculos = () => {
             ) : (
                 <>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                        {vehiculos.map(v => (
+                        {vehiculosOrdenados.map(v => (
                             <div key={v._id} className={`bg-white rounded-xl shadow overflow-hidden flex flex-col ${modoEdicion ? "border-2 border-amber-400" : ""}`}>
                                 <CarruselVehiculo
                                     vehiculo={v}
@@ -388,6 +439,11 @@ const CatalogoVehiculos = () => {
                                         </span>
                                     </div>
                                     <p className="text-xs text-slate-500">{v.anio} · {v.tipo} · {v.combustible}</p>
+                                    {v.version && (
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 w-fit">
+                                            {v.version}
+                                        </span>
+                                    )}
                                     {v.totalReportes > 0 && (
                                         <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 w-fit">
                                             {v.totalReportes} reporte(s)

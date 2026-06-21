@@ -39,7 +39,7 @@ export const crearFalla = async (req, res) => {
 export const listarFallas = async (req, res) => {
     try {
         const pagina = parseInt(req.query.pagina) || 1
-        const limite = 10
+        const limite = parseInt(req.query.limite) || 10
         const skip = (pagina - 1) * limite
         const busqueda = req.query.busqueda || ""
 

@@ -1,8 +1,10 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
+
 //  STORE DE AUTENTICACIÓN (Zustand con persistencia)
 //  Guarda el token y el rol del usuario logueado.
+
 
 const storeAuth = create(
     persist(

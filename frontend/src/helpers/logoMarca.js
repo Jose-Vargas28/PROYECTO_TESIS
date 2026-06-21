@@ -2,7 +2,6 @@
 //  Helpers para logos de marcas de vehículos
 //  Usa logo.dev (gratuito) a partir del dominio de la marca.
 
-
 const dominiosPorMarca = {
     // Americanas
     chevrolet: "chevrolet.com",

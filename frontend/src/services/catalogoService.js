@@ -1,6 +1,5 @@
 import axios from "axios"
 
-
 //  SERVICIO DE CATÁLOGOS (Vehículos y Fallas)
 
 
@@ -26,9 +25,11 @@ const authHeadersMultipart = () => {
 }
 
 // ---- Vehículos ----
-export const getVehiculos = (pagina = 1, busqueda = "") => {
-    const params = new URLSearchParams({ pagina })
+export const getVehiculos = (pagina = 1, busqueda = "", tipo = "", marca = "", limite = 10) => {
+    const params = new URLSearchParams({ pagina, limite })
     if (busqueda) params.append("busqueda", busqueda)
+    if (tipo) params.append("tipo", tipo)
+    if (marca) params.append("marca", marca)
     return axios.get(`${API}/vehiculos?${params}`)
 }
 export const crearVehiculo = (data) => axios.post(`${API}/vehiculos`, data, authHeaders())
@@ -55,8 +56,8 @@ export const toggleFotoAutoVehiculo = (id) =>
     axios.patch(`${API}/vehiculos/${id}/foto-auto`, {}, authHeaders())
 
 // ---- Fallas ----
-export const getFallas = (pagina = 1, busqueda = "") => {
-    const params = new URLSearchParams({ pagina })
+export const getFallas = (pagina = 1, busqueda = "", limite = 10) => {
+    const params = new URLSearchParams({ pagina, limite })
     if (busqueda) params.append("busqueda", busqueda)
     return axios.get(`${API}/fallas?${params}`)
 }

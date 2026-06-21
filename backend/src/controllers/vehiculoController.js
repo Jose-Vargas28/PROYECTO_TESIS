@@ -9,7 +9,7 @@ const MAX_FOTOS = 5
 // CREAR VEHÍCULO (cualquier usuario logueado)
 export const crearVehiculo = async (req, res) => {
     try {
-        let { marca, modelo, anio } = req.body
+        let { marca, modelo, anio, version } = req.body
 
         if (!marca || !modelo || !anio) {
             return res.status(400).json({ msg: "Marca, modelo y año son obligatorios" })
@@ -30,25 +30,29 @@ export const crearVehiculo = async (req, res) => {
             }
         }
 
-        // Normalizamos para evitar duplicados por mayúsculas/espacios
         marca = marca.trim()
         modelo = modelo.trim()
         anio = Number(anio)
-        const tipo = req.body.tipo || 'automóvil'
-        const combustible = req.body.combustible || 'gasolina'
+        version = (version || "").trim().slice(0, 20)
+        const tipo = req.body.tipo || "automóvil"
+        const combustible = req.body.combustible || "gasolina"
 
-        // Validar que no exista la misma combinación (insensible a mayúsculas)
+        // Validar duplicado incluyendo versión
         const existe = await Vehiculo.findOne({
             marca: { $regex: `^${marca}$`, $options: "i" },
             modelo: { $regex: `^${modelo}$`, $options: "i" },
-            anio
+            anio,
+            version: { $regex: `^${version}$`, $options: "i" }
         })
 
         if (existe) {
-            return res.status(400).json({ msg: `El vehículo ${marca} ${modelo} ${anio} ya existe` })
+            const nombreCompleto = version
+                ? `${marca} ${modelo} ${anio} ${version}`
+                : `${marca} ${modelo} ${anio}`
+            return res.status(400).json({ msg: `El vehículo "${nombreCompleto}" ya existe` })
         }
 
-        const vehiculo = new Vehiculo({ marca, modelo, anio, tipo, combustible, creadoPor: req.userBDD._id })
+        const vehiculo = new Vehiculo({ marca, modelo, anio, version, tipo, combustible, creadoPor: req.userBDD._id })
         await vehiculo.save()
 
         res.status(201).json({ msg: "Vehículo registrado correctamente", vehiculo })
@@ -66,16 +70,22 @@ export const crearVehiculo = async (req, res) => {
 export const listarVehiculos = async (req, res) => {
     try {
         const pagina = parseInt(req.query.pagina) || 1
-        const limite = 10
+        const limite = parseInt(req.query.limite) || 10
         const skip = (pagina - 1) * limite
         const busqueda = req.query.busqueda || ""
+        const tipo = req.query.tipo || ""
+        const marca = req.query.marca || ""
 
-        const filtro = busqueda ? {
-            $or: [
+        const filtro = {}
+
+        if (busqueda) {
+            filtro.$or = [
                 { marca: { $regex: busqueda, $options: "i" } },
                 { modelo: { $regex: busqueda, $options: "i" } }
             ]
-        } : {}
+        }
+        if (tipo) filtro.tipo = tipo
+        if (marca) filtro.marca = { $regex: `^${marca}$`, $options: "i" }
 
         const total = await Vehiculo.countDocuments(filtro)
         const vehiculos = await Vehiculo.find(filtro)
@@ -131,27 +141,29 @@ export const eliminarVehiculo = async (req, res) => {
 // ACTUALIZAR VEHÍCULO (solo admin)
 export const actualizarVehiculo = async (req, res) => {
     try {
-        let { marca, modelo, anio } = req.body
+        let { marca, modelo, anio, version } = req.body
         if (!marca || !modelo || !anio) {
             return res.status(400).json({ msg: "Marca, modelo y año son obligatorios" })
         }
         marca = marca.trim()
         modelo = modelo.trim()
         anio = Number(anio)
+        version = (version || "").trim().slice(0, 20)
 
         const existe = await Vehiculo.findOne({
             _id: { $ne: req.params.id },
             marca: { $regex: `^${marca}$`, $options: "i" },
             modelo: { $regex: `^${modelo}$`, $options: "i" },
-            anio
+            anio,
+            version: { $regex: `^${version}$`, $options: "i" }
         })
         if (existe) {
-            return res.status(400).json({ msg: `Ya existe el vehículo ${marca} ${modelo} ${anio}` })
+            return res.status(400).json({ msg: `Ya existe el vehículo ${marca} ${modelo} ${anio} ${version}`.trim() })
         }
 
-        const tipo = req.body.tipo || 'automóvil'
-        const combustible = req.body.combustible || 'gasolina'
-        await Vehiculo.findByIdAndUpdate(req.params.id, { marca, modelo, anio, tipo, combustible }, { new: true })
+        const tipo = req.body.tipo || "automóvil"
+        const combustible = req.body.combustible || "gasolina"
+        await Vehiculo.findByIdAndUpdate(req.params.id, { marca, modelo, anio, version, tipo, combustible }, { new: true })
         res.status(200).json({ msg: "Vehículo actualizado correctamente" })
 
     } catch (error) {

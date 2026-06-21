@@ -439,6 +439,68 @@ export const estadisticas = async (req, res) => {
     }
 }
 
+// TENDENCIAS — fallas por modelo agrupadas por año de fabricación
+export const tendencias = async (req, res) => {
+    try {
+        const { marca, modelo } = req.query
+
+        // Buscar vehículos que coincidan con marca/modelo
+        const Vehiculo = (await import("../models/Vehiculo.js")).default
+        const filtroVehiculo = {}
+        if (marca) filtroVehiculo.marca = { $regex: marca, $options: "i" }
+        if (modelo) filtroVehiculo.modelo = { $regex: modelo, $options: "i" }
+
+        const vehiculos = await Vehiculo.find(filtroVehiculo).select("_id marca modelo anio")
+
+        if (vehiculos.length === 0) return res.status(200).json({ tendencia: [], modelos: [] })
+
+        // Agrupar reportes por vehículo
+        const vehiculoIds = vehiculos.map(v => v._id)
+        const reportes = await Reporte.find({
+            vehiculo: { $in: vehiculoIds },
+            activo: true,
+            validado: true
+        }).populate("vehiculo", "marca modelo anio")
+
+        // Construir mapa: "Marca Modelo" → { anio → { totalFallas, gravedades } }
+        const mapaModelos = {}
+
+        reportes.forEach(r => {
+            if (!r.vehiculo) return
+            const key = `${r.vehiculo.marca} ${r.vehiculo.modelo}`
+            const anio = r.vehiculo.anio
+
+            if (!mapaModelos[key]) mapaModelos[key] = {}
+            if (!mapaModelos[key][anio]) mapaModelos[key][anio] = { totalFallas: 0, alta: 0, media: 0, baja: 0 }
+
+            mapaModelos[key][anio].totalFallas++
+            if (r.gravedad) mapaModelos[key][anio][r.gravedad]++
+        })
+
+        // Convertir a formato para gráfica de líneas
+        // Cada modelo = una línea, cada punto = un año
+        const tendencia = Object.entries(mapaModelos).map(([nombreModelo, porAnio]) => ({
+            modelo: nombreModelo,
+            datos: Object.entries(porAnio)
+                .map(([anio, stats]) => ({ anio: Number(anio), ...stats }))
+                .sort((a, b) => a.anio - b.anio)
+        }))
+
+        // Lista de modelos disponibles para el selector
+        const modelosDisponibles = [...new Set(vehiculos.map(v => ({
+            marca: v.marca,
+            modelo: v.modelo,
+            key: `${v.marca} ${v.modelo}`
+        })).map(v => JSON.stringify(v)))].map(v => JSON.parse(v))
+
+        res.status(200).json({ tendencia, modelos: modelosDisponibles })
+
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al obtener tendencias" })
+    }
+}
+
 // DEVOLVER REPORTE AL USUARIO (admin)
 export const devolverReporte = async (req, res) => {
     try {

@@ -33,4 +33,19 @@ const soloAdmin = (req, res, next) => {
     next()
 }
 
-export { crearTokenJWT, verificarTokenJWT, soloAdmin }
+// Token opcional — si hay token lo verifica, si no hay continúa igual
+const verificarTokenOpcional = async (req, res, next) => {
+    const { authorization } = req.headers
+    if (!authorization) { req.userBDD = null; return next() }
+    try {
+        const token = authorization.split(" ")[1]
+        const { id, rol } = jwt.verify(token, process.env.JWT_SECRET)
+        req.userBDD = await User.findById(id).select("-password")
+        if (req.userBDD) req.userBDD.rol = rol
+    } catch {
+        req.userBDD = null
+    }
+    next()
+}
+
+export { crearTokenJWT, verificarTokenJWT, soloAdmin, verificarTokenOpcional }

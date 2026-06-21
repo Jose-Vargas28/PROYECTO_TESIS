@@ -5,13 +5,19 @@ const fotoSchema = new Schema({
     publicId: { type: String, required: true },
     principal: { type: Boolean, default: false },
     esPexels: { type: Boolean, default: false },
-    urlOriginal: { type: String } // URL original de Pexels para restaurar en el listado
+    urlOriginal: { type: String }
 }, { _id: true })
 
 const vehiculoSchema = new Schema({
     marca: { type: String, required: true, trim: true },
     modelo: { type: String, required: true, trim: true },
     anio: { type: Number, required: true },
+    version: {
+        type: String,
+        trim: true,
+        maxlength: 20,
+        default: ""
+    },
     tipo: {
         type: String,
         enum: ["automóvil", "suv", "camioneta", "moto", "vehículo comercial"],
@@ -32,8 +38,7 @@ const vehiculoSchema = new Schema({
     timestamps: true
 })
 
-// Índice único compuesto: no se puede repetir la combinación marca + modelo + año
-// Se normaliza a minúsculas vía el controlador para evitar duplicados por mayúsculas
-vehiculoSchema.index({ marca: 1, modelo: 1, anio: 1 }, { unique: true })
+// Índice único: marca + modelo + año + versión
+vehiculoSchema.index({ marca: 1, modelo: 1, anio: 1, version: 1 }, { unique: true })
 
 export default model("Vehiculo", vehiculoSchema)

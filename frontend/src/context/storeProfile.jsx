@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import axios from "axios"
 
-
+//  STORE DE PERFIL
 //  Trae los datos del usuario logueado desde el backend.
 
 

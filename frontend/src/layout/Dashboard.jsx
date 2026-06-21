@@ -51,6 +51,7 @@ const Dashboard = () => {
         { to: "/dashboard/reportes", label: "Ver reportes" },
         { to: "/dashboard/mis-reportes", label: "Mis reportes" },
         { to: "/dashboard/vehiculos", label: "Vehículos" },
+        { to: "/dashboard/confiabilidad", label: "Confiabilidad" },
         { to: "/dashboard/estadisticas", label: "Estadísticas" },
         { to: "/dashboard/perfil", label: "Mi perfil" },
     ]

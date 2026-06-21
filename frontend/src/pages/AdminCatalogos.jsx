@@ -35,10 +35,10 @@ const AdminCatalogos = () => {
     const [detalleVehiculo, setDetalleVehiculo] = useState(null)
     const [editarVehiculo, setEditarVehiculo] = useState(null)
     const [eliminarVehiculoModal, setEliminarVehiculoModal] = useState(null)
-    const [formVehiculo, setFormVehiculo] = useState({ marca: "", modelo: "", anio: "", tipo: "automóvil", combustible: "gasolina" })
+    const [formVehiculo, setFormVehiculo] = useState({ marca: "", modelo: "", anio: "", version: "", tipo: "automóvil", combustible: "gasolina" })
     const [anioManualModal, setAnioManualModal] = useState(false)
     const [mostrarFormCrearV, setMostrarFormCrearV] = useState(false)
-    const [formCrearV, setFormCrearV] = useState({ marca: "", modelo: "", anio: "", tipo: "automóvil", combustible: "gasolina" })
+    const [formCrearV, setFormCrearV] = useState({ marca: "", modelo: "", anio: "", version: "", tipo: "automóvil", combustible: "gasolina" })
     const [anioManualCrear, setAnioManualCrear] = useState(false)
 
     // Modales falla
@@ -91,11 +91,12 @@ const AdminCatalogos = () => {
         try {
             const res = await crearVehiculo({
                 marca: formCrearV.marca, modelo: formCrearV.modelo,
-                anio: Number(formCrearV.anio), tipo: formCrearV.tipo, combustible: formCrearV.combustible
+                anio: Number(formCrearV.anio), version: formCrearV.version || "",
+                tipo: formCrearV.tipo, combustible: formCrearV.combustible
             })
             toast.success(res.data.msg)
             setMostrarFormCrearV(false)
-            setFormCrearV({ marca: "", modelo: "", anio: "", tipo: "automóvil", combustible: "gasolina" })
+            setFormCrearV({ marca: "", modelo: "", anio: "", version: "", tipo: "automóvil", combustible: "gasolina" })
             setAnioManualCrear(false)
             cargarVehiculos(paginaV, busquedaV)
         } catch (error) { toast.error(error?.response?.data?.msg || "Error al crear vehículo") }
@@ -115,7 +116,7 @@ const AdminCatalogos = () => {
 
     // ---- Vehículos ----
     const abrirEditarVehiculo = (v) => {
-        setFormVehiculo({ marca: v.marca, modelo: v.modelo, anio: v.anio, tipo: v.tipo || "automóvil", combustible: v.combustible || "gasolina" })
+        setFormVehiculo({ marca: v.marca, modelo: v.modelo, anio: v.anio, version: v.version || "", tipo: v.tipo || "automóvil", combustible: v.combustible || "gasolina" })
         setAnioManualModal(!aniosVehiculo.includes(Number(v.anio)))
         setEditarVehiculo(v)
     }
@@ -125,7 +126,8 @@ const AdminCatalogos = () => {
         try {
             const res = await actualizarVehiculo(editarVehiculo._id, {
                 marca: formVehiculo.marca, modelo: formVehiculo.modelo,
-                anio: Number(formVehiculo.anio), tipo: formVehiculo.tipo, combustible: formVehiculo.combustible
+                anio: Number(formVehiculo.anio), version: formVehiculo.version || "",
+                tipo: formVehiculo.tipo, combustible: formVehiculo.combustible
             })
             toast.success(res.data.msg)
             setEditarVehiculo(null)
@@ -224,6 +226,14 @@ const AdminCatalogos = () => {
                                 onChange={(e) => setFormCrearV({ ...formCrearV, combustible: e.target.value })}>
                                 {tiposCombustible.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                             </select>
+                            <div>
+                                <input className={inputClass}
+                                    placeholder="Versión (opcional, máx 20 car.)"
+                                    maxLength={20}
+                                    value={formCrearV.version}
+                                    onChange={(e) => setFormCrearV({ ...formCrearV, version: e.target.value })} />
+                                <p className="text-xs text-slate-400 mt-1">Ej: 1.6 MT · 2.0 AT · 4x4 AWD · Hatchback · Emotion</p>
+                            </div>
                             <button type="button" onClick={handleCrearVehiculo}
                                 className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg text-sm">
                                 Registrar vehículo
@@ -443,6 +453,13 @@ const AdminCatalogos = () => {
                                 <select className={inputClass} value={formVehiculo.combustible} onChange={(e) => setFormVehiculo({ ...formVehiculo, combustible: e.target.value })}>
                                     {tiposCombustible.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                                 </select></div>
+                            <div>
+                                <label className="mb-2 block text-sm font-semibold text-slate-700">Versión <span className="text-slate-400 font-normal">(opcional)</span></label>
+                                <input className={inputClass} maxLength={20} placeholder="Ej: 1.6 MT · 2.0 AT · 4x4 AWD"
+                                    value={formVehiculo.version}
+                                    onChange={(e) => setFormVehiculo({ ...formVehiculo, version: e.target.value })} />
+                                <p className="text-xs text-slate-400 mt-1">Máx. 20 caracteres</p>
+                            </div>
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button type="button" onClick={handleGuardarVehiculo}

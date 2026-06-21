@@ -12,7 +12,6 @@ import {
     getFallas, crearFalla,
 } from "../services/catalogoService"
 import { esYoutube } from "../helpers/youtube"
-import SeccionEvidencia from "../components/ui/SeccionEvidencia"
 import { tiposCombustible, tiposVehiculo, aniosVehiculo } from "../config/ecuador"
 
 const ReportarFalla = () => {
@@ -25,13 +24,15 @@ const ReportarFalla = () => {
     // Selección del vehículo
     const [marca, setMarca] = useState("")
     const [modelo, setModelo] = useState("")
-    const [anio, setAnio] = useState("")
+    const [anioSeleccionado, setAnioSeleccionado] = useState("") // solo el año numérico
+    const [vehiculoId, setVehiculoId] = useState("") // _id del vehículo seleccionado
+    const [version, setVersion] = useState("")
     const [fallaId, setFallaId] = useState("")
     const [gravedad, setGravedad] = useState("media")
     const [descripcion, setDescripcion] = useState("")
 
     // Modales de creación
-    const [nuevoVehiculo, setNuevoVehiculo] = useState({ marca: "", modelo: "", anio: "", tipo: "automóvil", combustible: "gasolina" })
+    const [nuevoVehiculo, setNuevoVehiculo] = useState({ marca: "", modelo: "", anio: "", version: "", tipo: "automóvil", combustible: "gasolina" })
     const [anioManual, setAnioManual] = useState(false)
     const [nuevaFalla, setNuevaFalla] = useState({ nombre: "", descripcion: "", gravedad: "media" })
     const [mostrarFormVehiculo, setMostrarFormVehiculo] = useState(false)
@@ -52,7 +53,10 @@ const ReportarFalla = () => {
 
     const cargarCatalogos = async () => {
         try {
-            const [v, f] = await Promise.all([getVehiculos(), getFallas()])
+            const [v, f] = await Promise.all([
+                getVehiculos(1, "", "", "", 500),
+                getFallas(1, "", 500)
+            ])
             setVehiculos(v.data.vehiculos || v.data || [])
             setFallas(f.data.fallas || f.data || [])
         } catch (error) {
@@ -67,13 +71,21 @@ const ReportarFalla = () => {
     // Derivados para los combos dependientes
     const marcas = [...new Set(vehiculos.map(v => v.marca))].sort()
     const modelosDeMarca = [...new Set(vehiculos.filter(v => v.marca === marca).map(v => v.modelo))].sort()
-    const aniosDeModelo = vehiculos
-        .filter(v => v.marca === marca && v.modelo === modelo)
-        .map(v => ({ id: v._id, anio: v.anio, combustible: v.combustible, tipo: v.tipo }))
-        .sort((a, b) => b.anio - a.anio)
 
-    // El vehículo seleccionado (su _id) se obtiene del año elegido
-    const vehiculoIdSeleccionado = anio // aquí 'anio' guarda el _id del vehículo
+    // Años únicos del modelo seleccionado
+    const aniosDeModelo = [...new Set(
+        vehiculos
+            .filter(v => v.marca === marca && v.modelo === modelo)
+            .map(v => v.anio)
+    )].sort((a, b) => b - a)
+
+    // Versiones disponibles para el año seleccionado
+    const versionesDeAnio = vehiculos
+        .filter(v => v.marca === marca && v.modelo === modelo && v.anio === Number(anioSeleccionado))
+        .map(v => ({ id: v._id, version: v.version || "" }))
+
+    // ID del vehículo según año + versión seleccionada
+    const vehiculoIdSeleccionado = vehiculoId
 
     const inputClass = "block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
     const labelClass = "mb-2 block text-sm font-semibold text-slate-700"
@@ -87,15 +99,19 @@ const ReportarFalla = () => {
             const res = await crearVehiculo({
                 marca: nuevoVehiculo.marca,
                 modelo: nuevoVehiculo.modelo,
-                anio: Number(nuevoVehiculo.anio)
+                anio: Number(nuevoVehiculo.anio),
+                version: nuevoVehiculo.version || "",
+                tipo: nuevoVehiculo.tipo,
+                combustible: nuevoVehiculo.combustible
             })
             toast.success(res.data.msg)
             await cargarCatalogos()
-            // Seleccionar automáticamente el recién creado
             setMarca(res.data.vehiculo.marca)
             setModelo(res.data.vehiculo.modelo)
-            setAnio(res.data.vehiculo._id)
-            setNuevoVehiculo({ marca: "", modelo: "", anio: "" })
+            setAnioSeleccionado(String(res.data.vehiculo.anio))
+            setVehiculoId(res.data.vehiculo._id)
+            setVersion(res.data.vehiculo.version || "")
+            setNuevoVehiculo({ marca: "", modelo: "", anio: "", version: "", tipo: "automóvil", combustible: "gasolina" })
             setMostrarFormVehiculo(false)
         } catch (error) {
             toast.error(error?.response?.data?.msg || "Error al crear vehículo")
@@ -119,7 +135,7 @@ const ReportarFalla = () => {
 
     // ---- Crear el reporte ----
     const handleCrearReporte = async () => {
-        if (!vehiculoIdSeleccionado) return toast.error("Selecciona el vehículo completo (marca, modelo y año)")
+        if (!vehiculoIdSeleccionado) return toast.error("Selecciona el vehículo completo (marca, modelo, año y versión si aplica)")
         if (!fallaId) return toast.error("Selecciona una falla")
         try {
             const res = await crearReporte({
@@ -255,16 +271,27 @@ const ReportarFalla = () => {
                                 <select className={inputClass} value={nuevoVehiculo.combustible} onChange={(e) => setNuevoVehiculo({ ...nuevoVehiculo, combustible: e.target.value })}>
                                     {tiposCombustible.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                                 </select>
+                                <div>
+                                    <input className={inputClass}
+                                        placeholder="Versión (opcional, máx 20 car.) Ej: 1.6 Sedan AT, 2.0 4x4 MT"
+                                        maxLength={20}
+                                        value={nuevoVehiculo.version}
+                                        onChange={(e) => setNuevoVehiculo({ ...nuevoVehiculo, version: e.target.value })} />
+                                    <p className="text-xs text-slate-400 mt-1">
+                                        Ejemplos: 1.5 MT · 2.0 AT · 4x4 AWD · Hatchback MT · Emotion AT
+                                    </p>
+                                </div>
                                 <button onClick={handleCrearVehiculo} className="bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded-lg w-full">
                                     Registrar vehículo
                                 </button>
                             </div>
                         ) : (
+                            <>
                             <div className="grid md:grid-cols-3 gap-3">
                                 {/* Marca */}
                                 <div>
                                     <label className={labelClass}>Marca</label>
-                                    <select className={inputClass} value={marca} onChange={(e) => { setMarca(e.target.value); setModelo(""); setAnio("") }}>
+                                    <select className={inputClass} value={marca} onChange={(e) => { setMarca(e.target.value); setModelo(""); setAnioSeleccionado(""); setVehiculoId(""); setVersion("") }}>
                                         <option value="">Seleccionar</option>
                                         {marcas.map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
@@ -272,7 +299,7 @@ const ReportarFalla = () => {
                                 {/* Modelo */}
                                 <div>
                                     <label className={labelClass}>Modelo</label>
-                                    <select className={inputClass} value={modelo} onChange={(e) => { setModelo(e.target.value); setAnio("") }} disabled={!marca}>
+                                    <select className={inputClass} value={modelo} onChange={(e) => { setModelo(e.target.value); setAnioSeleccionado(""); setVehiculoId(""); setVersion("") }} disabled={!marca}>
                                         <option value="">Seleccionar</option>
                                         {modelosDeMarca.map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
@@ -280,12 +307,55 @@ const ReportarFalla = () => {
                                 {/* Año */}
                                 <div>
                                     <label className={labelClass}>Año</label>
-                                    <select className={inputClass} value={anio} onChange={(e) => setAnio(e.target.value)} disabled={!modelo}>
+                                    <select className={inputClass} value={anioSeleccionado}
+                                        onChange={(e) => {
+                                            setAnioSeleccionado(e.target.value)
+                                            setVehiculoId("")
+                                            setVersion("")
+                                        }}
+                                        disabled={!modelo}>
                                         <option value="">Seleccionar</option>
-                                        {aniosDeModelo.map(a => <option key={a.id} value={a.id}>{a.anio}</option>)}
+                                        {aniosDeModelo.map(a => (
+                                            <option key={a} value={a}>{a}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
+
+                            {/* Version - aparece solo si el año tiene versiones */}
+                            {anioSeleccionado && versionesDeAnio.length > 0 && (
+                                <div className="mt-3">
+                                    <label className={labelClass}>
+                                        Versión
+                                        {versionesDeAnio.every(v => !v.version) &&
+                                            <span className="text-slate-400 font-normal ml-1">(versión estándar, sin variantes)</span>
+                                        }
+                                    </label>
+                                    <select className={inputClass} value={vehiculoId}
+                                        onChange={(e) => {
+                                            setVehiculoId(e.target.value)
+                                            const v = versionesDeAnio.find(v => v.id === e.target.value)
+                                            setVersion(v?.version || "")
+                                        }}>
+                                        <option value="">Seleccionar versión</option>
+                                        {versionesDeAnio.map(v => (
+                                            <option key={v.id} value={v.id}>
+                                                {v.version || "Versión estándar"}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Auto-seleccionar si solo hay una versión */}
+                            {anioSeleccionado && versionesDeAnio.length === 1 && !vehiculoId && (() => {
+                                setTimeout(() => {
+                                    setVehiculoId(versionesDeAnio[0].id)
+                                    setVersion(versionesDeAnio[0].version || "")
+                                }, 0)
+                                return null
+                            })()}
+                            </>
                         )}
                     </div>
 

@@ -1,7 +1,8 @@
 import axios from "axios"
 
+
 //  SERVICIO DE REPORTES
-//  Centraliza las llamadas a los endpoints de reportes.
+
 
 const API = import.meta.env.VITE_BACKEND_URL
 
@@ -30,6 +31,12 @@ const fileHeaders = () => {
 // ---- Públicas ----
 export const getReportes = () => axios.get(`${API}/reportes`)
 export const getEstadisticas = () => axios.get(`${API}/reportes/estadisticas`)
+export const getTendencias = (params = {}) => {
+    const query = new URLSearchParams()
+    if (params.marca) query.append("marca", params.marca)
+    if (params.modelo) query.append("modelo", params.modelo)
+    return axios.get(`${API}/reportes/tendencias?${query}`)
+}
 export const getReporteDetalle = (id) => axios.get(`${API}/reportes/${id}`)
 
 // ---- Usuario logueado ----

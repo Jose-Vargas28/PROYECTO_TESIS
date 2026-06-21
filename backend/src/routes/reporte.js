@@ -12,6 +12,7 @@ import {
     validarReporte,
     invalidarReporte,
     estadisticas,
+    tendencias,
     devolverReporte
 } from "../controllers/reporteController.js"
 import { verificarTokenJWT, soloAdmin } from "../middlewares/JWT.js"
@@ -21,6 +22,7 @@ const router = Router()
 // ---- Públicas ----
 router.get("/reportes", obtenerReportes)
 router.get("/reportes/estadisticas", estadisticas)
+router.get("/reportes/tendencias", tendencias)
 
 // ---- Solo admin (rutas específicas ANTES de /reportes/:id) ----
 router.get("/reportes/pendientes", verificarTokenJWT, soloAdmin, obtenerReportesPendientes)
