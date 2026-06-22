@@ -12,6 +12,7 @@ const seedAdmin = async () => {
         const adminEmail = process.env.ADMIN_EMAIL
         const adminPassword = process.env.ADMIN_PASSWORD
         const adminNombre = process.env.ADMIN_NOMBRE || "Administrador"
+        const adminApellido = process.env.ADMIN_APELLIDO || "Sistema"
 
         if (!adminEmail || !adminPassword) {
             console.error("Faltan ADMIN_EMAIL o ADMIN_PASSWORD en el archivo .env")
@@ -28,6 +29,7 @@ const seedAdmin = async () => {
         // Crear el admin
         const admin = new User({
             nombre: adminNombre,
+            apellido: adminApellido,
             email: adminEmail,
             rol: "admin",
             confirmEmail: true  // el admin no necesita confirmar por correo

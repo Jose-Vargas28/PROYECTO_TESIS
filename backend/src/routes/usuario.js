@@ -7,6 +7,8 @@ import {
     obtenerPerfil,
     actualizarPerfil,
     cambiarPassword,
+    subirFotoPerfil,
+    eliminarFotoPerfil,
     listarUsuariosEliminados,
     restaurarUsuario,
     reportesDeUsuario
@@ -19,6 +21,8 @@ const router = Router()
 router.get("/perfil", verificarTokenJWT, obtenerPerfil)
 router.put("/perfil", verificarTokenJWT, actualizarPerfil)
 router.put("/perfil/password", verificarTokenJWT, cambiarPassword)
+router.post("/perfil/foto", verificarTokenJWT, subirFotoPerfil)
+router.delete("/perfil/foto", verificarTokenJWT, eliminarFotoPerfil)
 
 // Solo admin
 router.get("/usuarios", verificarTokenJWT, soloAdmin, listarUsuarios)

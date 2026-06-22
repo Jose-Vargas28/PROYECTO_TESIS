@@ -1,4 +1,4 @@
-
+// ============================================================
 //  seedExtra.js — Agrega vehículos y valoraciones SIN borrar
 //  AutoReporta EC
 //
@@ -6,7 +6,7 @@
 //  ✅ No elimina datos existentes
 //  ✅ Omite vehículos que ya existen (por marca+modelo+año+versión)
 //  ✅ Omite valoraciones duplicadas (un usuario ya valoró ese vehículo)
-
+// ============================================================
 
 import mongoose from "mongoose"
 import bcrypt from "bcryptjs"

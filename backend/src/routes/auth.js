@@ -3,6 +3,7 @@ import {
     registro,
     confirmarEmail,
     login,
+    loginGoogle,
     perfil,
     recuperarPassword,
     verificarTokenPassword,
@@ -16,6 +17,7 @@ const router = Router()
 router.post("/registro", registro)
 router.get("/confirmar/:token", confirmarEmail)
 router.post("/login", login)
+router.post("/login-google", loginGoogle)
 router.post("/recuperarpassword", recuperarPassword)
 router.get("/recuperarpassword/:token", verificarTokenPassword)
 router.post("/nuevopassword/:token", nuevaPassword)

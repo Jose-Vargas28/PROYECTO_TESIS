@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate, useSearchParams } from "react-router"
-import { ToastContainer } from "react-toastify"
+import { ToastContainer, toast } from "react-toastify"
 import axios from "axios"
 import storeAuth from "../context/storeAuth"
 import Badge from "../components/ui/Badge"
@@ -10,6 +10,7 @@ import ModalConfirmar from "../components/ui/ModalConfirmar"
 import storeProfile from "../context/storeProfile"
 import useFetch from "../hooks/useFetch"
 import LogoMarca from "../components/ui/LogoMarca"
+import { exportarReportesExcel } from "../services/exportService"
 
 const VerReportes = () => {
     const navigate = useNavigate()
@@ -31,6 +32,7 @@ const VerReportes = () => {
     const [modoEdicion, setModoEdicion] = useState(false)
     const [modalEliminar, setModalEliminar] = useState(null)
     const [modalEliminarPropio, setModalEliminarPropio] = useState(null)
+    const [exportando, setExportando] = useState(false)
 
     const cargar = useCallback(async (pag = 1, busq = "", grav = "", vehId = "") => {
         setCargando(true)
@@ -93,6 +95,16 @@ const VerReportes = () => {
         if (res) { setModalEliminar(null); cargar(pagina, busqueda, gravedad, vehiculoFiltroId) }
     }
 
+    const handleExportarExcel = async () => {
+        setExportando(true)
+        try {
+            await exportarReportesExcel(token, { busqueda, gravedad })
+        } catch (error) {
+            toast.error("Error al exportar a Excel")
+        }
+        setExportando(false)
+    }
+
     return (
         <div>
             <ToastContainer />
@@ -102,10 +114,16 @@ const VerReportes = () => {
                     <p className="text-slate-500 text-sm">{total} reporte(s) encontrado(s)</p>
                 </div>
                 {rol === "admin" && (
-                    <button type="button" onClick={() => setModoEdicion(!modoEdicion)}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${modoEdicion ? "bg-amber-500 hover:bg-amber-600 text-white" : "bg-slate-200 hover:bg-slate-300 text-slate-600"}`}>
-                        {modoEdicion ? "✏️ Modo edición activo" : "Gestionar reportes"}
-                    </button>
+                    <div className="flex gap-2 flex-wrap">
+                        <button type="button" onClick={handleExportarExcel} disabled={exportando}
+                            className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-700 hover:bg-green-800 text-white disabled:opacity-50 flex items-center gap-1.5">
+                            {exportando ? "Generando..." : "📊 Exportar a Excel"}
+                        </button>
+                        <button type="button" onClick={() => setModoEdicion(!modoEdicion)}
+                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${modoEdicion ? "bg-amber-500 hover:bg-amber-600 text-white" : "bg-slate-200 hover:bg-slate-300 text-slate-600"}`}>
+                            {modoEdicion ? "✏️ Modo edición activo" : "Gestionar reportes"}
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -190,7 +208,7 @@ const VerReportes = () => {
                                         <td className="p-3 text-sm text-slate-600 capitalize">{r.vehiculo?.combustible || "—"}</td>
                                         <td className="p-3"><Badge tipo={r.gravedad} /></td>
                                         <td className="p-3 text-sm">
-                                            <div className="font-semibold text-slate-700">{r.usuario?.nombre}</div>
+                                            <div className="font-semibold text-slate-700">{r.usuario?.nombre} {r.usuario?.apellido}</div>
                                             <div className="text-slate-400 text-xs">{r.usuario?.email}</div>
                                         </td>
                                         <td className="p-3 text-sm">
@@ -256,7 +274,7 @@ const VerReportes = () => {
             {modalEliminar && (
                 <ModalMotivo
                     titulo="Eliminar reporte"
-                    descripcion={`Vas a eliminar el reporte de ${modalEliminar.usuario?.nombre}. El usuario recibirá un correo con el motivo.`}
+                    descripcion={`Vas a eliminar el reporte de ${modalEliminar.usuario?.nombre} ${modalEliminar.usuario?.apellido}. El usuario recibirá un correo con el motivo.`}
                     onConfirmar={handleEliminar}
                     onCancelar={() => setModalEliminar(null)}
                 />

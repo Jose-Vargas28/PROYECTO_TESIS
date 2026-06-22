@@ -1,5 +1,6 @@
 import Reporte from "../models/Reporte.js"
 import User from "../models/User.js"
+import Vehiculo from "../models/Vehiculo.js"
 import {
     sendMailReporteVerificado,
     sendMailReporteInvalidado,
@@ -371,25 +372,33 @@ export const validarReporte = async (req, res) => {
 export const invalidarReporte = async (req, res) => {
     try {
         const { motivo } = req.body
-        if (!motivo) {
-            return res.status(400).json({ msg: "Debes indicar el motivo para retirar la verificación" })
-        }
 
         const reporte = await popReporte(Reporte.findOne({ _id: req.params.id, activo: true }))
         if (!reporte) return res.status(404).json({ msg: "Reporte no encontrado" })
+
+        // Si el admin retira la validación de su propio reporte, no se le exige
+        // un motivo escrito ni se le envía un correo explicándoselo a sí mismo.
+        // Eso solo tiene sentido cuando el reporte pertenece a otro usuario.
+        const esPropio = reporte.usuario._id.toString() === req.userBDD._id.toString()
+
+        if (!esPropio && !motivo) {
+            return res.status(400).json({ msg: "Debes indicar el motivo para retirar la verificación" })
+        }
 
         reporte.validado = false
         reporte.validadoEn = null
         reporte.validadoPor = null
         await reporte.save()
 
-        const usuario = await User.findById(reporte.usuario)
-        if (usuario?.email) {
-            const vehiculo = reporte.vehiculo
-                ? `${reporte.vehiculo.marca} ${reporte.vehiculo.modelo} ${reporte.vehiculo.anio}`
-                : "Vehículo"
-            const falla = reporte.falla?.nombre || "Falla reportada"
-            sendMailReporteInvalidado(usuario.email, usuario.nombre, vehiculo, falla, motivo)
+        if (!esPropio) {
+            const usuario = await User.findById(reporte.usuario._id)
+            if (usuario?.email) {
+                const vehiculo = reporte.vehiculo
+                    ? `${reporte.vehiculo.marca} ${reporte.vehiculo.modelo} ${reporte.vehiculo.anio}`
+                    : "Vehículo"
+                const falla = reporte.falla?.nombre || "Falla reportada"
+                sendMailReporteInvalidado(usuario.email, usuario.nombre, vehiculo, falla, motivo)
+            }
         }
 
         res.status(200).json({ msg: "Validación retirada correctamente" })
@@ -532,5 +541,26 @@ export const devolverReporte = async (req, res) => {
     } catch (error) {
         console.error(error)
         res.status(500).json({ msg: "Error al devolver el reporte" })
+    }
+}
+
+// ESTADÍSTICAS PÚBLICAS PARA EL HOME — solo 3 números, pensado para
+// cargar rápido en la página de inicio (no requiere login).
+export const estadisticasHome = async (req, res) => {
+    try {
+        const [totalReportes, totalVehiculos, marcas] = await Promise.all([
+            Reporte.countDocuments({ activo: true, validado: true }),
+            Vehiculo.countDocuments(),
+            Vehiculo.distinct("marca")
+        ])
+
+        res.status(200).json({
+            totalReportes,
+            totalVehiculos,
+            totalMarcas: marcas.length
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al obtener estadísticas del home" })
     }
 }

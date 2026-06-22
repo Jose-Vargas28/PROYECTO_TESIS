@@ -182,10 +182,10 @@ const AdminUsuarios = () => {
     }
 
     const configModal = {
-        banear: { titulo: "¿Suspender usuario?", descripcion: `¿Suspender a ${modalAccion?.usuario?.nombre}?`, textoConfirmar: "Sí, suspender", color: "bg-amber-500 hover:bg-amber-600" },
-        desbanear: { titulo: "¿Reactivar usuario?", descripcion: `¿Reactivar a ${modalAccion?.usuario?.nombre}?`, textoConfirmar: "Sí, reactivar", color: "bg-green-600 hover:bg-green-700" },
-        eliminar: { titulo: "¿Eliminar usuario?", descripcion: `¿Eliminar a ${modalAccion?.usuario?.nombre}? Sus reportes no serán eliminados.`, textoConfirmar: "Sí, eliminar", color: "bg-red-600 hover:bg-red-700" },
-        restaurar: { titulo: "¿Restaurar usuario?", descripcion: `¿Restaurar la cuenta de ${modalAccion?.usuario?.nombre}?`, textoConfirmar: "Sí, restaurar", color: "bg-blue-900 hover:bg-blue-800" }
+        banear: { titulo: "¿Suspender usuario?", descripcion: `¿Suspender a ${modalAccion?.usuario?.nombre} ${modalAccion?.usuario?.apellido}?`, textoConfirmar: "Sí, suspender", color: "bg-amber-500 hover:bg-amber-600" },
+        desbanear: { titulo: "¿Reactivar usuario?", descripcion: `¿Reactivar a ${modalAccion?.usuario?.nombre} ${modalAccion?.usuario?.apellido}?`, textoConfirmar: "Sí, reactivar", color: "bg-green-600 hover:bg-green-700" },
+        eliminar: { titulo: "¿Eliminar usuario?", descripcion: `¿Eliminar a ${modalAccion?.usuario?.nombre} ${modalAccion?.usuario?.apellido}? Sus reportes no serán eliminados.`, textoConfirmar: "Sí, eliminar", color: "bg-red-600 hover:bg-red-700" },
+        restaurar: { titulo: "¿Restaurar usuario?", descripcion: `¿Restaurar la cuenta de ${modalAccion?.usuario?.nombre} ${modalAccion?.usuario?.apellido}?`, textoConfirmar: "Sí, restaurar", color: "bg-blue-900 hover:bg-blue-800" }
     }
 
     const estadoReporte = (r) => {
@@ -298,10 +298,16 @@ const AdminUsuarios = () => {
                                         {usuarios.map((u, i) => (
                                             <tr key={u._id} className={`${i % 2 === 0 ? "bg-white" : "bg-slate-50"} ${u.baneado ? "opacity-60" : ""}`}>
                                                 <td className="p-3">
-                                                    <button type="button" onClick={() => setModalDetalle(u)}
-                                                        className="font-semibold text-blue-700 hover:underline text-left">
-                                                        {u.nombre}
-                                                    </button>
+                                                    <div className="flex items-center gap-2 font-semibold text-slate-700">
+                                                        <span className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center overflow-hidden shrink-0">
+                                                            {u.foto?.url ? (
+                                                                <img src={u.foto.url} alt="" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span className="text-white text-xs font-bold">{u.nombre?.charAt(0)?.toUpperCase() || "U"}</span>
+                                                            )}
+                                                        </span>
+                                                        {u.nombre} {u.apellido}
+                                                    </div>
                                                 </td>
                                                 <td className="p-3 text-sm text-slate-500 text-center">{u.email}</td>
                                                 <td className="p-3 text-sm text-center">
@@ -325,7 +331,7 @@ const AdminUsuarios = () => {
                                                 </td>
                                                 <td className="p-3">
                                                     {modoGestion ? (
-                                                        <div className="flex gap-2 flex-wrap">
+                                                        <div className="flex gap-2 flex-wrap justify-center">
                                                             {u.baneado ? (
                                                                 <button type="button" onClick={() => setModalAccion({ usuario: u, accion: "desbanear" })}
                                                                     className="bg-green-100 hover:bg-green-200 text-green-800 text-xs font-semibold px-3 py-1 rounded-lg">Reactivar</button>
@@ -337,7 +343,7 @@ const AdminUsuarios = () => {
                                                                 className="bg-red-100 hover:bg-red-200 text-red-800 text-xs font-semibold px-3 py-1 rounded-lg">Eliminar</button>
                                                         </div>
                                                     ) : (
-                                                        <div className="flex gap-2">
+                                                        <div className="flex gap-2 justify-center">
                                                             <button type="button" onClick={() => setModalDetalle(u)}
                                                                 className="text-blue-700 hover:underline text-xs">
                                                                 Ver datos
@@ -390,7 +396,7 @@ const AdminUsuarios = () => {
                                     <tbody>
                                         {usuariosEliminados.map((u, i) => (
                                             <tr key={u._id} className={i % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                                                <td className="p-3 font-semibold text-slate-700 text-center">{u.nombre}</td>
+                                                <td className="p-3 font-semibold text-slate-700 text-center">{u.nombre} {u.apellido}</td>
                                                 <td className="p-3 text-sm text-slate-500 text-center">{u.email}</td>
                                                 <td className="p-3 text-sm text-slate-400 text-center">{formatearFecha(u.eliminadoEn)}</td>
                                                 <td className="p-3 text-center">
@@ -418,7 +424,7 @@ const AdminUsuarios = () => {
                         {/* Header */}
                         <div className="flex items-center justify-between p-5 border-b border-slate-200 shrink-0">
                             <div>
-                                <h3 className="font-bold text-slate-800 text-lg">{modalReportes.nombre}</h3>
+                                <h3 className="font-bold text-slate-800 text-lg">{modalReportes.nombre} {modalReportes.apellido}</h3>
                                 <p className="text-xs text-slate-400 mt-0.5">{modalReportes.email}</p>
                             </div>
                             <button type="button" onClick={() => setModalReportes(null)}
@@ -580,13 +586,22 @@ const AdminUsuarios = () => {
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
                         <div className="flex items-center justify-between p-5 border-b border-slate-200">
-                            <h3 className="font-bold text-slate-800 text-lg">Datos del usuario</h3>
+                            <div className="flex items-center gap-3">
+                                <span className="w-12 h-12 rounded-full bg-blue-900 flex items-center justify-center overflow-hidden shrink-0">
+                                    {modalDetalle.foto?.url ? (
+                                        <img src={modalDetalle.foto.url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-white text-lg font-bold">{modalDetalle.nombre?.charAt(0)?.toUpperCase() || "U"}</span>
+                                    )}
+                                </span>
+                                <h3 className="font-bold text-slate-800 text-lg">Datos del usuario</h3>
+                            </div>
                             <button type="button" onClick={() => setModalDetalle(null)}
                                 className="text-slate-400 hover:text-slate-600 text-xl font-bold">×</button>
                         </div>
                         <div className="p-5">
                             <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                                <div className="col-span-2"><p className="text-xs text-slate-400">Nombre</p><p className="font-semibold text-slate-700">{modalDetalle.nombre}</p></div>
+                                <div className="col-span-2"><p className="text-xs text-slate-400">Nombre</p><p className="font-semibold text-slate-700">{modalDetalle.nombre} {modalDetalle.apellido}</p></div>
                                 <div className="col-span-2"><p className="text-xs text-slate-400">Correo</p><p className="font-semibold text-slate-700">{modalDetalle.email}</p></div>
                                 <div><p className="text-xs text-slate-400">Teléfono</p><p className="font-semibold text-slate-700">{modalDetalle.telefono || <span className="text-slate-400 italic font-normal text-xs">No registrado</span>}</p></div>
                                 <div><p className="text-xs text-slate-400">Registro</p><p className="font-semibold text-slate-700">{formatearFecha(modalDetalle.createdAt)}</p></div>

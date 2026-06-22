@@ -4,11 +4,15 @@ import { useParams, useNavigate } from "react-router"
 import { ToastContainer } from "react-toastify"
 import useFetch from "../hooks/useFetch"
 import Logo from "../components/Logo"
+import MedidorPassword from "../components/ui/MedidorPassword"
+import BotonMostrarPassword from "../components/ui/BotonMostrarPassword"
 
 const Reset = () => {
     const { token } = useParams()
     const navigate = useNavigate()
     const [tokenValido, setTokenValido] = useState(false)
+    const [verPassword, setVerPassword] = useState(false)
+    const [verConfirmar, setVerConfirmar] = useState(false)
     const { register, handleSubmit, formState: { errors }, watch } = useForm()
     const { fetchDataBackend } = useFetch()
 
@@ -41,29 +45,40 @@ const Reset = () => {
                     <form onSubmit={handleSubmit(onSubmit)}>
                         <div className="mb-4">
                             <label className="mb-2 block text-sm font-semibold text-slate-700">Nueva contraseña</label>
-                            <input
-                                type="password"
-                                placeholder="••••••••"
-                                className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
-                                {...register("password", {
-                                    required: "La contraseña es obligatoria",
-                                    minLength: { value: 6, message: "Mínimo 6 caracteres" }
-                                })}
-                            />
+                            <p className="text-xs text-slate-400 mb-1.5">Mínimo 8 caracteres, con mayúscula, número y carácter especial</p>
+                            <div className="relative">
+                                <input
+                                    type={verPassword ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 pr-10 text-slate-700"
+                                    {...register("password", {
+                                        required: "La contraseña es obligatoria",
+                                        pattern: {
+                                            value: /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/,
+                                            message: "Debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial"
+                                        }
+                                    })}
+                                />
+                                <BotonMostrarPassword visible={verPassword} onClick={() => setVerPassword(!verPassword)} />
+                            </div>
                             {errors.password && <p className="text-red-700 text-sm mt-1">{errors.password.message}</p>}
+                            <MedidorPassword password={watch("password")} />
                         </div>
 
                         <div className="mb-6">
                             <label className="mb-2 block text-sm font-semibold text-slate-700">Confirmar contraseña</label>
-                            <input
-                                type="password"
-                                placeholder="••••••••"
-                                className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
-                                {...register("confirmpassword", {
-                                    required: "Confirma la contraseña",
-                                    validate: (value) => value === watch("password") || "Las contraseñas no coinciden"
-                                })}
-                            />
+                            <div className="relative">
+                                <input
+                                    type={verConfirmar ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 pr-10 text-slate-700"
+                                    {...register("confirmpassword", {
+                                        required: "Confirma la contraseña",
+                                        validate: (value) => value === watch("password") || "Las contraseñas no coinciden"
+                                    })}
+                                />
+                                <BotonMostrarPassword visible={verConfirmar} onClick={() => setVerConfirmar(!verConfirmar)} />
+                            </div>
                             {errors.confirmpassword && <p className="text-red-700 text-sm mt-1">{errors.confirmpassword.message}</p>}
                         </div>
 

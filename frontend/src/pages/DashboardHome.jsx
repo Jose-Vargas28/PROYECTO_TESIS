@@ -10,6 +10,8 @@ const DashboardHome = () => {
         { to: "/dashboard/reportar", titulo: "Reportar una falla", desc: "Registra un nuevo problema vehicular con evidencias", color: "bg-blue-900" },
         { to: "/dashboard/reportes", titulo: "Ver reportes", desc: "Consulta los reportes verificados de la comunidad", color: "bg-slate-700" },
         { to: "/dashboard/mis-reportes", titulo: "Mis reportes", desc: "Gestiona los reportes que has creado", color: "bg-slate-700" },
+        { to: "/dashboard/vehiculos", titulo: "Vehículos", desc: "Explora el catálogo y consulta fichas técnicas", color: "bg-slate-700" },
+        { to: "/dashboard/confiabilidad", titulo: "Confiabilidad", desc: "Ranking de vehículos según valoraciones de la comunidad", color: "bg-slate-700" },
         { to: "/dashboard/estadisticas", titulo: "Estadísticas", desc: "Visualiza tendencias de fallas por marca y modelo", color: "bg-slate-700" },
     ]
 
@@ -45,6 +47,27 @@ const DashboardHome = () => {
                         >
                             <h3 className="text-xl font-bold text-amber-800 mb-2">Validar reportes</h3>
                             <p className="text-amber-700 text-sm">Revisa y verifica los reportes pendientes</p>
+                        </Link>
+                        <Link
+                            to="/dashboard/admin/usuarios"
+                            className="bg-blue-50 border border-blue-200 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+                        >
+                            <h3 className="text-xl font-bold text-blue-900 mb-2">Gestión de usuarios</h3>
+                            <p className="text-blue-800 text-sm">Administra las cuentas de usuarios de la plataforma</p>
+                        </Link>
+                        <Link
+                            to="/dashboard/admin/catalogos"
+                            className="bg-slate-50 border border-slate-200 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+                        >
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">Catálogos</h3>
+                            <p className="text-slate-600 text-sm">Gestiona los vehículos y tipos de falla registrados</p>
+                        </Link>
+                        <Link
+                            to="/dashboard/admin/valoraciones"
+                            className="bg-purple-50 border border-purple-200 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+                        >
+                            <h3 className="text-xl font-bold text-purple-800 mb-2">Moderar valoraciones</h3>
+                            <p className="text-purple-700 text-sm">Revisa comentarios y elimina contenido inapropiado</p>
                         </Link>
                         <Link
                             to="/dashboard/admin/eliminados"

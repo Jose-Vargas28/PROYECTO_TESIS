@@ -4,13 +4,16 @@ import { Link, useNavigate } from "react-router"
 import { ToastContainer } from "react-toastify"
 import useFetch from "../hooks/useFetch"
 import Logo from "../components/Logo"
+import MedidorPassword from "../components/ui/MedidorPassword"
+import BotonMostrarPassword from "../components/ui/BotonMostrarPassword"
 import { theme } from "../config/theme"
 
 const Register = () => {
     const navigate = useNavigate()
     const [showPassword, setShowPassword] = useState(false)
-    const { register, handleSubmit, formState: { errors } } = useForm()
+    const { register, handleSubmit, watch, formState: { errors } } = useForm()
     const { fetchDataBackend } = useFetch()
+    const passwordActual = watch("password")
 
     const onSubmit = async (data) => {
         const url = `${import.meta.env.VITE_BACKEND_URL}/registro`
@@ -31,15 +34,39 @@ const Register = () => {
                     <p className="text-slate-400 mb-8 text-sm">Regístrate para reportar y consultar fallas vehiculares</p>
 
                     <form onSubmit={handleSubmit(onSubmit)}>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-semibold text-slate-700">Nombre completo</label>
-                            <input
-                                type="text"
-                                placeholder="Tu nombre"
-                                className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
-                                {...register("nombre", { required: "El nombre es obligatorio" })}
-                            />
-                            {errors.nombre && <p className="text-red-700 text-sm mt-1">{errors.nombre.message}</p>}
+                        <div className="mb-4 flex gap-3">
+                            <div className="flex-1">
+                                <label className="mb-2 block text-sm font-semibold text-slate-700">Nombre</label>
+                                <input
+                                    type="text"
+                                    placeholder="Tu nombre"
+                                    className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
+                                    {...register("nombre", {
+                                        required: "El nombre es obligatorio",
+                                        pattern: {
+                                            value: /^[A-Za-zÁÉÍÓÚÑÜáéíóúñü\s]+$/,
+                                            message: "El nombre solo puede contener letras"
+                                        }
+                                    })}
+                                />
+                                {errors.nombre && <p className="text-red-700 text-sm mt-1">{errors.nombre.message}</p>}
+                            </div>
+                            <div className="flex-1">
+                                <label className="mb-2 block text-sm font-semibold text-slate-700">Apellido</label>
+                                <input
+                                    type="text"
+                                    placeholder="Tu apellido"
+                                    className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700"
+                                    {...register("apellido", {
+                                        required: "El apellido es obligatorio",
+                                        pattern: {
+                                            value: /^[A-Za-zÁÉÍÓÚÑÜáéíóúñü\s]+$/,
+                                            message: "El apellido solo puede contener letras"
+                                        }
+                                    })}
+                                />
+                                {errors.apellido && <p className="text-red-700 text-sm mt-1">{errors.apellido.message}</p>}
+                            </div>
                         </div>
 
                         <div className="mb-4">
@@ -55,6 +82,7 @@ const Register = () => {
 
                         <div className="mb-4">
                             <label className="mb-2 block text-sm font-semibold text-slate-700">Contraseña</label>
+                            <p className="text-xs text-slate-400 mb-1.5">Mínimo 8 caracteres, con mayúscula, número y carácter especial</p>
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
@@ -62,18 +90,16 @@ const Register = () => {
                                     className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 pr-10"
                                     {...register("password", {
                                         required: "La contraseña es obligatoria",
-                                        minLength: { value: 6, message: "Mínimo 6 caracteres" }
+                                        pattern: {
+                                            value: /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/,
+                                            message: "Debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial"
+                                        }
                                     })}
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute top-2.5 right-3 text-slate-400 hover:text-slate-600 text-sm"
-                                >
-                                    {showPassword ? "Ocultar" : "Ver"}
-                                </button>
+                                <BotonMostrarPassword visible={showPassword} onClick={() => setShowPassword(!showPassword)} />
                             </div>
                             {errors.password && <p className="text-red-700 text-sm mt-1">{errors.password.message}</p>}
+                            <MedidorPassword password={passwordActual} />
                         </div>
 
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">

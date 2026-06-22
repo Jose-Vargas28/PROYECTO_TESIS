@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react"
+import { ToastContainer, toast } from "react-toastify"
 import { getEstadisticas, getTendencias } from "../services/reporteService"
+import { exportarBoletinPDF } from "../services/exportService"
+import storeAuth from "../context/storeAuth"
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend, CartesianGrid,
@@ -71,8 +74,10 @@ const TooltipTendencia = ({ active, payload, label }) => {
 }
 
 const Estadisticas = () => {
+    const { rol, token } = storeAuth()
     const [data, setData] = useState(null)
     const [cargando, setCargando] = useState(true)
+    const [exportandoPDF, setExportandoPDF] = useState(false)
 
     // Tendencias
     const [tendenciaData, setTendenciaData] = useState(null)
@@ -150,9 +155,28 @@ const Estadisticas = () => {
     const marcaTop = dataMarca[0]?.nombre || "—"
     const fallaTop = dataTipoFalla[0]?.nombre || "—"
 
+    const handleExportarBoletin = async () => {
+        setExportandoPDF(true)
+        try {
+            await exportarBoletinPDF(token)
+        } catch (error) {
+            toast.error("Error al generar el boletín PDF")
+        }
+        setExportandoPDF(false)
+    }
+
     return (
         <div>
-            <h1 className="text-3xl font-bold text-slate-800 mb-1">Estadísticas y tendencias</h1>
+            <ToastContainer />
+            <div className="flex justify-between items-start flex-wrap gap-4 mb-1">
+                <h1 className="text-3xl font-bold text-slate-800">Estadísticas y tendencias</h1>
+                {rol === "admin" && data?.total > 0 && (
+                    <button type="button" onClick={handleExportarBoletin} disabled={exportandoPDF}
+                        className="bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50">
+                        {exportandoPDF ? "Generando..." : "📄 Descargar boletín PDF"}
+                    </button>
+                )}
+            </div>
             <p className="text-slate-500 mb-6">Análisis basado en {data.total} reporte(s) verificado(s).</p>
 
             {data.total === 0 ? (

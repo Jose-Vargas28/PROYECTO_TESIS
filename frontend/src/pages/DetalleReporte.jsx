@@ -2,9 +2,11 @@ import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router"
 import { ToastContainer, toast } from "react-toastify"
 import { getReporteDetalle, validarReporte, invalidarReporte, devolverReporte } from "../services/reporteService"
+import { exportarReportePDF } from "../services/exportService"
 import { getYoutubeEmbedUrl } from "../helpers/youtube"
 import Badge from "../components/ui/Badge"
 import ModalMotivo from "../components/ui/ModalMotivo"
+import ModalConfirmar from "../components/ui/ModalConfirmar"
 import LogoMarca from "../components/ui/LogoMarca"
 import storeProfile from "../context/storeProfile"
 import storeAuth from "../context/storeAuth"
@@ -23,8 +25,12 @@ const DetalleReporte = () => {
     const [reporte, setReporte] = useState(null)
     const [cargando, setCargando] = useState(true)
     const [modalInvalidar, setModalInvalidar] = useState(false)
+    const [modalInvalidarPropio, setModalInvalidarPropio] = useState(false)
+    const [modalValidar, setModalValidar] = useState(false)
     const [modalDevolver, setModalDevolver] = useState(false)
-    const { rol } = storeAuth()
+    const { rol, token } = storeAuth()
+    const { user } = storeProfile()
+    const [exportandoPDF, setExportandoPDF] = useState(false)
 
     const cargar = async () => {
         try {
@@ -38,10 +44,13 @@ const DetalleReporte = () => {
 
     useEffect(() => { cargar() }, [id])
 
+    const esReportePropio = reporte?.usuario?._id === user?._id
+
     const handleValidar = async () => {
         try {
             await validarReporte(id)
             toast.success("Reporte validado")
+            setModalValidar(false)
             cargar()
         } catch (error) {
             toast.error(error?.response?.data?.msg || "Error al validar")
@@ -68,6 +77,29 @@ const DetalleReporte = () => {
         } catch (error) {
             toast.error(error?.response?.data?.msg || "Error")
         }
+    }
+
+    // Retirar validación de un reporte propio del admin: sin motivo escrito,
+    // sin correo (no tiene sentido notificarse a uno mismo).
+    const handleInvalidarPropio = async () => {
+        try {
+            await invalidarReporte(id)
+            toast.success("Validación retirada")
+            setModalInvalidarPropio(false)
+            cargar()
+        } catch (error) {
+            toast.error(error?.response?.data?.msg || "Error")
+        }
+    }
+
+    const handleExportarPDF = async () => {
+        setExportandoPDF(true)
+        try {
+            await exportarReportePDF(token, id)
+        } catch (error) {
+            toast.error("Error al generar el PDF")
+        }
+        setExportandoPDF(false)
     }
 
     if (cargando) return <p className="text-slate-400">Cargando...</p>
@@ -151,9 +183,13 @@ const DetalleReporte = () => {
                     {rol === "admin" && (
                         <div className="mt-4 pt-4 border-t border-slate-100">
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Acciones de administrador</p>
+                            <button type="button" onClick={handleExportarPDF} disabled={exportandoPDF}
+                                className="w-full mb-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                                {exportandoPDF ? "Generando PDF..." : "📄 Descargar constancia en PDF"}
+                            </button>
                             {!reporte.validado ? (
                                 <div className="flex flex-col gap-2">
-                                    <button type="button" onClick={handleValidar}
+                                    <button type="button" onClick={() => setModalValidar(true)}
                                         className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
                                         ✅ Validar reporte
                                     </button>
@@ -163,7 +199,7 @@ const DetalleReporte = () => {
                                     </button>
                                 </div>
                             ) : (
-                                <button type="button" onClick={() => setModalInvalidar(true)}
+                                <button type="button" onClick={() => esReportePropio ? setModalInvalidarPropio(true) : setModalInvalidar(true)}
                                     className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
                                     ⚠️ Retirar validación
                                 </button>
@@ -240,6 +276,26 @@ const DetalleReporte = () => {
                 </div>
             )}
 
+            {modalValidar && (
+                <ModalConfirmar
+                    titulo="¿Validar este reporte?"
+                    descripcion="Se marcará como verificado y será visible para todos los usuarios."
+                    textoConfirmar="Continuar"
+                    colorBoton="bg-green-600 hover:bg-green-700"
+                    onConfirmar={handleValidar}
+                    onCancelar={() => setModalValidar(false)}
+                />
+            )}
+            {modalInvalidarPropio && (
+                <ModalConfirmar
+                    titulo="¿Retirar la validación?"
+                    descripcion="Es tu propio reporte, así que no se enviará ningún correo ni se pedirá un motivo."
+                    textoConfirmar="Continuar"
+                    colorBoton="bg-amber-500 hover:bg-amber-600"
+                    onConfirmar={handleInvalidarPropio}
+                    onCancelar={() => setModalInvalidarPropio(false)}
+                />
+            )}
             {modalDevolver && (
                 <ModalMotivo
                     titulo="↩️ Devolver reporte al usuario"

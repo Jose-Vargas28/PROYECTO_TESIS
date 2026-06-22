@@ -463,7 +463,7 @@ const DetalleVehiculo = () => {
                             <div key={v._id} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
                                 <div className="flex items-start justify-between gap-2 mb-2">
                                     <div>
-                                        <p className="text-sm font-semibold text-slate-700">{v.usuario?.nombre}</p>
+                                        <p className="text-sm font-semibold text-slate-700">{v.usuario?.nombre} {v.usuario?.apellido}</p>
                                         {(v.usuario?.region || v.usuario?.provincia) && (
                                             <p className="text-xs text-slate-400">
                                                 {[v.usuario.provincia, v.usuario.region].filter(Boolean).join(", ")}

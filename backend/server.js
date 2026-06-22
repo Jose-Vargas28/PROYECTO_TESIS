@@ -9,6 +9,7 @@ import routerVehiculo from "./src/routes/vehiculo.js"
 import routerFalla from "./src/routes/falla.js"
 import routerUsuario from "./src/routes/usuario.js"
 import routerValoracion from "./src/routes/valoracion.js"
+import routerExportar from "./src/routes/exportar.js"
 
 dotenv.config()
 
@@ -30,6 +31,7 @@ app.use("/api", routerReporte)
 app.use("/api", routerEvidencia)
 app.use("/api", routerUsuario)
 app.use("/api", routerValoracion)
+app.use("/api", routerExportar)
 
 app.use((req, res) => res.status(404).json({ msg: "Endpoint no encontrado" }))
 

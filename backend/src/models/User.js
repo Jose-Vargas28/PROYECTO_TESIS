@@ -7,6 +7,11 @@ const userSchema = new Schema({
         required: true,
         trim: true
     },
+    apellido: {
+        type: String,
+        required: true,
+        trim: true
+    },
     email: {
         type: String,
         required: true,
@@ -16,7 +21,20 @@ const userSchema = new Schema({
     },
     password: {
         type: String,
-        required: true
+        // Solo es obligatoria si la cuenta se creó con correo/contraseña.
+        // Las cuentas creadas vía Google no tienen password local.
+        required: function () {
+            return this.proveedor === "local"
+        }
+    },
+    proveedor: {
+        type: String,
+        enum: ["local", "google"],
+        default: "local"
+    },
+    googleId: {
+        type: String,
+        default: null
     },
     rol: {
         type: String,
@@ -39,6 +57,12 @@ const userSchema = new Schema({
         default: null
     },
     provincia: { type: String, trim: true, default: null },
+
+    // Foto de perfil (Cloudinary). Ambos null = se muestra el avatar con inicial.
+    foto: {
+        url: { type: String, default: null },
+        publicId: { type: String, default: null }
+    },
 
     baneado: {
         type: Boolean,

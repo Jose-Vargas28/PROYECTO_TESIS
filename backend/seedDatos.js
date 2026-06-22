@@ -1,10 +1,11 @@
-
+// ============================================================
 //  seedDatos.js — Carga masiva de datos de prueba
 //  AutoReporta EC — v3 con versiones, valoraciones Consumer Reports
 //
 //  Uso: node seedDatos.js
 //  ⚠️  Elimina todos los usuarios (no admin), vehículos,
 //      fallas, reportes y valoraciones existentes
+// ============================================================
 
 import mongoose from "mongoose"
 import bcrypt from "bcryptjs"
@@ -30,31 +31,31 @@ const fechaAleatoria = (diasAtras = 180) => {
 
 // ---- USUARIOS ----
 const USUARIOS_DATA = [
-    { nombre: "Carlos Andrade",    email: "candrade@mail.com",   region: "Sierra",    provincia: "Pichincha" },
-    { nombre: "María Salazar",     email: "msalazar@mail.com",   region: "Sierra",    provincia: "Pichincha" },
-    { nombre: "Jorge Mosquera",    email: "jmosquera@mail.com",  region: "Sierra",    provincia: "Pichincha" },
-    { nombre: "Daniela Ortiz",     email: "dortiz@mail.com",     region: "Sierra",    provincia: "Pichincha" },
-    { nombre: "Sebastián Ríos",    email: "srios@mail.com",      region: "Sierra",    provincia: "Tungurahua" },
-    { nombre: "Valeria Cárdenas",  email: "vcardenas@mail.com",  region: "Sierra",    provincia: "Tungurahua" },
-    { nombre: "Pablo Herrera",     email: "pherrera@mail.com",   region: "Sierra",    provincia: "Azuay" },
-    { nombre: "Sofía Mora",        email: "smora@mail.com",       region: "Sierra",    provincia: "Azuay" },
-    { nombre: "Diego Castillo",    email: "dcastillo@mail.com",  region: "Sierra",    provincia: "Imbabura" },
-    { nombre: "Gabriela Vega",     email: "gvega@mail.com",      region: "Sierra",    provincia: "Cotopaxi" },
-    { nombre: "Andrés Tapia",      email: "atapia@mail.com",     region: "Sierra",    provincia: "Chimborazo" },
-    { nombre: "Camila Paredes",    email: "cparedes@mail.com",   region: "Sierra",    provincia: "Loja" },
-    { nombre: "Ricardo Espinoza",  email: "respinoza@mail.com",  region: "Sierra",    provincia: "Carchi" },
-    { nombre: "Fernanda Lara",     email: "flara@mail.com",      region: "Sierra",    provincia: "Cañar" },
-    { nombre: "Mateo Guevara",     email: "mguevara@mail.com",   region: "Sierra",    provincia: "Bolívar" },
-    { nombre: "Luis Mendoza",      email: "lmendoza@mail.com",   region: "Costa",     provincia: "Guayas" },
-    { nombre: "Ana Torres",        email: "atorres@mail.com",    region: "Costa",     provincia: "Guayas" },
-    { nombre: "Roberto Freire",    email: "rfreire@mail.com",    region: "Costa",     provincia: "Manabí" },
-    { nombre: "Patricia Suárez",   email: "psuarez@mail.com",    region: "Costa",     provincia: "El Oro" },
-    { nombre: "Miguel Alvarado",   email: "malvarado@mail.com",  region: "Costa",     provincia: "Esmeraldas" },
-    { nombre: "José Pintado",      email: "jpintado@mail.com",   region: "Oriente",   provincia: "Napo" },
-    { nombre: "Carmen Aguirre",    email: "caguirre@mail.com",   region: "Oriente",   provincia: "Pastaza" },
-    { nombre: "Nelson Shiguango",  email: "nshiguango@mail.com", region: "Oriente",   provincia: "Orellana" },
-    { nombre: "Iván Granja",       email: "igranja@mail.com",    region: "Galápagos", provincia: "Galápagos" },
-    { nombre: "Rosa Cedeño",       email: "rcedeno@mail.com",    region: "Galápagos", provincia: "Galápagos" },
+    { nombre: "Carlos",    apellido: "Andrade",    email: "candrade@mail.com",   region: "Sierra",    provincia: "Pichincha" },
+    { nombre: "María",     apellido: "Salazar",    email: "msalazar@mail.com",   region: "Sierra",    provincia: "Pichincha" },
+    { nombre: "Jorge",     apellido: "Mosquera",   email: "jmosquera@mail.com",  region: "Sierra",    provincia: "Pichincha" },
+    { nombre: "Daniela",   apellido: "Ortiz",      email: "dortiz@mail.com",     region: "Sierra",    provincia: "Pichincha" },
+    { nombre: "Sebastián", apellido: "Ríos",       email: "srios@mail.com",      region: "Sierra",    provincia: "Tungurahua" },
+    { nombre: "Valeria",   apellido: "Cárdenas",   email: "vcardenas@mail.com",  region: "Sierra",    provincia: "Tungurahua" },
+    { nombre: "Pablo",     apellido: "Herrera",    email: "pherrera@mail.com",   region: "Sierra",    provincia: "Azuay" },
+    { nombre: "Sofía",     apellido: "Mora",       email: "smora@mail.com",      region: "Sierra",    provincia: "Azuay" },
+    { nombre: "Diego",     apellido: "Castillo",   email: "dcastillo@mail.com",  region: "Sierra",    provincia: "Imbabura" },
+    { nombre: "Gabriela",  apellido: "Vega",       email: "gvega@mail.com",      region: "Sierra",    provincia: "Cotopaxi" },
+    { nombre: "Andrés",    apellido: "Tapia",      email: "atapia@mail.com",     region: "Sierra",    provincia: "Chimborazo" },
+    { nombre: "Camila",    apellido: "Paredes",    email: "cparedes@mail.com",   region: "Sierra",    provincia: "Loja" },
+    { nombre: "Ricardo",   apellido: "Espinoza",   email: "respinoza@mail.com",  region: "Sierra",    provincia: "Carchi" },
+    { nombre: "Fernanda",  apellido: "Lara",       email: "flara@mail.com",      region: "Sierra",    provincia: "Cañar" },
+    { nombre: "Mateo",     apellido: "Guevara",    email: "mguevara@mail.com",   region: "Sierra",    provincia: "Bolívar" },
+    { nombre: "Luis",      apellido: "Mendoza",    email: "lmendoza@mail.com",   region: "Costa",     provincia: "Guayas" },
+    { nombre: "Ana",       apellido: "Torres",     email: "atorres@mail.com",    region: "Costa",     provincia: "Guayas" },
+    { nombre: "Roberto",   apellido: "Freire",     email: "rfreire@mail.com",    region: "Costa",     provincia: "Manabí" },
+    { nombre: "Patricia",  apellido: "Suárez",     email: "psuarez@mail.com",    region: "Costa",     provincia: "El Oro" },
+    { nombre: "Miguel",    apellido: "Alvarado",   email: "malvarado@mail.com",  region: "Costa",     provincia: "Esmeraldas" },
+    { nombre: "José",      apellido: "Pintado",    email: "jpintado@mail.com",   region: "Oriente",   provincia: "Napo" },
+    { nombre: "Carmen",    apellido: "Aguirre",    email: "caguirre@mail.com",   region: "Oriente",   provincia: "Pastaza" },
+    { nombre: "Nelson",    apellido: "Shiguango",  email: "nshiguango@mail.com", region: "Oriente",   provincia: "Orellana" },
+    { nombre: "Iván",      apellido: "Granja",     email: "igranja@mail.com",    region: "Galápagos", provincia: "Galápagos" },
+    { nombre: "Rosa",      apellido: "Cedeño",     email: "rcedeno@mail.com",    region: "Galápagos", provincia: "Galápagos" },
 ]
 
 // ---- VEHÍCULOS con versiones ----

@@ -130,7 +130,7 @@ const AdminValoraciones = () => {
                                             )}
                                         </div>
                                         <p className="text-xs text-slate-500">
-                                            👤 {v.usuario?.nombre} · {v.usuario?.email}
+                                            👤 {v.usuario?.nombre} {v.usuario?.apellido} · {v.usuario?.email}
                                         </p>
                                         <div className="flex items-center gap-2 mt-1.5">
                                             <Estrellas valor={prom} />
@@ -188,7 +188,7 @@ const AdminValoraciones = () => {
             {modalEliminar && (
                 <ModalConfirmar
                     titulo="¿Eliminar esta valoración?"
-                    descripcion={`Se eliminará la valoración de ${modalEliminar.usuario?.nombre} para ${modalEliminar.vehiculo?.marca} ${modalEliminar.vehiculo?.modelo}. Podrás restaurarla después desde la papelera.`}
+                    descripcion={`Se eliminará la valoración de ${modalEliminar.usuario?.nombre} ${modalEliminar.usuario?.apellido} para ${modalEliminar.vehiculo?.marca} ${modalEliminar.vehiculo?.modelo}. Podrás restaurarla después desde la papelera.`}
                     textoConfirmar="Sí, eliminar"
                     colorBoton="bg-red-600 hover:bg-red-700"
                     onConfirmar={handleEliminar}

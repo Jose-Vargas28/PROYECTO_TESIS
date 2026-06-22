@@ -1,10 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate } from "react-router"
 import { ToastContainer } from "react-toastify"
 import useFetch from "../hooks/useFetch"
 import storeAuth from "../context/storeAuth"
 import Logo from "../components/Logo"
+import BotonMostrarPassword from "../components/ui/BotonMostrarPassword"
 import { theme } from "../config/theme"
 
 const Login = () => {
@@ -13,6 +14,8 @@ const Login = () => {
     const { register, handleSubmit, formState: { errors } } = useForm()
     const { fetchDataBackend } = useFetch()
     const { setToken, setRol } = storeAuth()
+    const googleBtnRef = useRef(null)
+    const clientIdGoogle = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
     const onSubmit = async (data) => {
         const url = `${import.meta.env.VITE_BACKEND_URL}/login`
@@ -23,6 +26,47 @@ const Login = () => {
             navigate("/dashboard")
         }
     }
+
+    const manejarRespuestaGoogle = async (respuestaGoogle) => {
+        const url = `${import.meta.env.VITE_BACKEND_URL}/login-google`
+        const response = await fetchDataBackend(url, { credential: respuestaGoogle.credential }, "POST")
+        if (response?.token) {
+            setToken(response.token)
+            setRol(response.rol)
+            navigate("/dashboard")
+        }
+    }
+
+    // Inicializa y dibuja el botón oficial de Google dentro de googleBtnRef.
+    // El script de Google se carga con `async` en index.html, así que puede no estar
+    // listo todavía al montar este componente — reintentamos brevemente hasta que aparezca.
+    // Si no configuraste VITE_GOOGLE_CLIENT_ID, esta sección simplemente no se ejecuta.
+    useEffect(() => {
+        if (!clientIdGoogle) return
+
+        let intentos = 0
+        const intervalo = setInterval(() => {
+            intentos++
+            if (window.google?.accounts?.id && googleBtnRef.current) {
+                clearInterval(intervalo)
+                window.google.accounts.id.initialize({
+                    client_id: clientIdGoogle,
+                    callback: manejarRespuestaGoogle
+                })
+                window.google.accounts.id.renderButton(googleBtnRef.current, {
+                    theme: "outline",
+                    size: "large",
+                    text: "continue_with",
+                    locale: "es",
+                    width: 320
+                })
+            } else if (intentos > 40) {
+                clearInterval(intervalo) // ~10s, el script no cargó (ej. sin conexión)
+            }
+        }, 250)
+
+        return () => clearInterval(intervalo)
+    }, [clientIdGoogle])
 
     return (
         <div className="flex flex-col sm:flex-row h-screen">
@@ -63,13 +107,7 @@ const Login = () => {
                                     className="block w-full rounded-md border border-slate-300 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 py-2 px-3 text-slate-700 pr-10"
                                     {...register("password", { required: "La contraseña es obligatoria" })}
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute top-2.5 right-3 text-slate-400 hover:text-slate-600 text-sm"
-                                >
-                                    {showPassword ? "Ocultar" : "Ver"}
-                                </button>
+                                <BotonMostrarPassword visible={showPassword} onClick={() => setShowPassword(!showPassword)} />
                             </div>
                             {errors.password && <p className="text-red-700 text-sm mt-1">{errors.password.message}</p>}
                         </div>
@@ -87,6 +125,19 @@ const Login = () => {
                             Iniciar sesión
                         </button>
                     </form>
+
+                    {clientIdGoogle && (
+                        <>
+                            <div className="flex items-center gap-3 my-6">
+                                <div className="flex-1 h-px bg-slate-200"></div>
+                                <span className="text-xs text-slate-400">o continúa con</span>
+                                <div className="flex-1 h-px bg-slate-200"></div>
+                            </div>
+                            <div className="flex justify-center">
+                                <div ref={googleBtnRef}></div>
+                            </div>
+                        </>
+                    )}
 
                     <p className="mt-6 text-center text-sm text-slate-500">
                         ¿No tienes cuenta?{" "}

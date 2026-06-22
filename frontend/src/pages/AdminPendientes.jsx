@@ -160,7 +160,7 @@ const AdminPendientes = () => {
                                         <td className="p-3">{r.falla?.nombre}</td>
                                         <td className="p-3"><Badge tipo={r.gravedad} /></td>
                                         <td className="p-3 text-sm">
-                                            <div className="font-semibold text-slate-700">{r.usuario?.nombre}</div>
+                                            <div className="font-semibold text-slate-700">{r.usuario?.nombre} {r.usuario?.apellido}</div>
                                             <div className="text-slate-400 text-xs">{r.usuario?.email}</div>
                                         </td>
                                         <td className="p-3 text-sm text-slate-500">{formatearFechaHora(r.createdAt)}</td>
@@ -190,7 +190,7 @@ const AdminPendientes = () => {
             {modalDevolver && (
                 <ModalMotivo
                     titulo="↩️ Devolver reporte al usuario"
-                    descripcion={`Escribe qué debe corregir ${modalDevolver.usuario?.nombre}. El usuario recibirá esta observación por correo y podrá editar su reporte.`}
+                    descripcion={`Escribe qué debe corregir ${modalDevolver.usuario?.nombre} ${modalDevolver.usuario?.apellido}. El usuario recibirá esta observación por correo y podrá editar su reporte.`}
                     colorBoton="bg-blue-900 hover:bg-blue-800"
                     onConfirmar={handleDevolver}
                     onCancelar={() => setModalDevolver(null)}
@@ -201,7 +201,7 @@ const AdminPendientes = () => {
             {modalEliminar && (
                 <ModalMotivo
                     titulo="Eliminar reporte"
-                    descripcion={`Vas a eliminar el reporte de ${modalEliminar.usuario?.nombre}. El usuario recibirá un correo con el motivo.`}
+                    descripcion={`Vas a eliminar el reporte de ${modalEliminar.usuario?.nombre} ${modalEliminar.usuario?.apellido}. El usuario recibirá un correo con el motivo.`}
                     onConfirmar={handleEliminarAjeno}
                     onCancelar={() => setModalEliminar(null)}
                 />

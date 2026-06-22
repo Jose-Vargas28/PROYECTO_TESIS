@@ -298,7 +298,7 @@ export const rankingConfiabilidad = async (req, res) => {
         if (marca) filtroVehiculo.marca = { $regex: marca, $options: "i" }
 
         const vehiculos = await Vehiculo.find(filtroVehiculo)
-            .select("marca modelo anio tipo combustible fotos")
+            .select("marca modelo anio version tipo combustible fotos")
 
         const vehiculoMap = {}
         vehiculos.forEach(v => vehiculoMap[v._id.toString()] = v)
@@ -454,7 +454,7 @@ export const eliminarValoracion = async (req, res) => {
         const valoracion = await Valoracion.findOne({
             _id: req.params.id,
             usuario: req.userBDD._id,
-            activo: { $ne: false }
+            activo: true
         })
         if (!valoracion) return res.status(404).json({ msg: "Valoración no encontrada" })
 

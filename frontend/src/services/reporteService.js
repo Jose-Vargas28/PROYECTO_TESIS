@@ -32,6 +32,7 @@ const fileHeaders = () => {
 // ---- Públicas ----
 export const getReportes = () => axios.get(`${API}/reportes`)
 export const getEstadisticas = () => axios.get(`${API}/reportes/estadisticas`)
+export const getEstadisticasHome = () => axios.get(`${API}/estadisticas-home`)
 export const getTendencias = (params = {}) => {
     const query = new URLSearchParams()
     if (params.marca) query.append("marca", params.marca)

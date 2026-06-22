@@ -84,12 +84,16 @@ const Dashboard = () => {
                 </div>
 
                 <div className="text-center mb-6">
-                    <div className="w-16 h-16 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-2">
-                        <span className="text-white text-2xl font-bold">
-                            {user?.nombre?.charAt(0)?.toUpperCase() || "U"}
-                        </span>
+                    <div className="w-16 h-16 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-2 overflow-hidden">
+                        {user?.foto?.url ? (
+                            <img src={user.foto.url} alt="Foto de perfil" className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="text-white text-2xl font-bold">
+                                {user?.nombre?.charAt(0)?.toUpperCase() || "U"}
+                            </span>
+                        )}
                     </div>
-                    <p className="text-slate-200 text-sm font-semibold">{user?.nombre}</p>
+                    <p className="text-slate-200 text-sm font-semibold">{user?.nombre} {user?.apellido}</p>
                     <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${
                         rol === "admin" ? "bg-amber-500 text-white" : "bg-blue-600 text-white"
                     }`}>

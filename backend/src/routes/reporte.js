@@ -12,6 +12,7 @@ import {
     validarReporte,
     invalidarReporte,
     estadisticas,
+    estadisticasHome,
     tendencias,
     devolverReporte
 } from "../controllers/reporteController.js"
@@ -23,6 +24,7 @@ const router = Router()
 router.get("/reportes", obtenerReportes)
 router.get("/reportes/estadisticas", estadisticas)
 router.get("/reportes/tendencias", tendencias)
+router.get("/estadisticas-home", estadisticasHome)
 
 // ---- Solo admin (rutas específicas ANTES de /reportes/:id) ----
 router.get("/reportes/pendientes", verificarTokenJWT, soloAdmin, obtenerReportesPendientes)

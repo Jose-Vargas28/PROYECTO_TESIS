@@ -1,8 +1,8 @@
-// =============================================================
+
 //  CONFIGURACIÓN CENTRAL DEL SISTEMA
 //  Cambia aquí los datos de marca, colores y textos.
 //  Todo el sistema lee desde este archivo.
-// =============================================================
+
 
 export const theme = {
     // ---- Identidad del sistema ----
@@ -27,6 +27,14 @@ export const theme = {
     contacto: {
         email: "contacto@autoreporta.ec",
         telefono: "+593 99 999 9999",
+
+        // ---- Redes sociales (footer) ----
+        // Reemplaza el "#" por tu enlace real cuando tengas las cuentas creadas.
+        // WhatsApp: usa el formato https://wa.me/593XXXXXXXXX (sin espacios ni el +)
+        facebook: "#",
+        instagram: "#",
+        twitter: "#",
+        whatsapp: "#",
     },
 
     // ---- Textos legales ----

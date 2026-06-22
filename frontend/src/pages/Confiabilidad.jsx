@@ -348,7 +348,7 @@ const Confiabilidad = () => {
                                                 {item.vehiculo.marca} {item.vehiculo.modelo}
                                             </span>
                                         </div>
-                                        <p className="text-xs text-slate-400">{item.vehiculo.anio} · {item.vehiculo.tipo}</p>
+                                        <p className="text-xs text-slate-400">{item.vehiculo.anio} · {item.vehiculo.tipo} · {item.vehiculo.combustible}</p>
                                         {item.vehiculo.version && (
                                             <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 w-fit">
                                                 {item.vehiculo.version}
