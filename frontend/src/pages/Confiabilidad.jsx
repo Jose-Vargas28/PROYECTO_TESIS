@@ -123,13 +123,20 @@ const CarruselVehiculo = ({ vehiculo, onAbrir }) => {
 }
 
 // Componente estrellas (solo lectura)
+// Estrellas con relleno parcial (ej: 4.3 = 4 llenas + la 5ta al 30%)
 const Estrellas = ({ valor, size = "sm" }) => {
     const sz = size === "lg" ? "text-xl" : size === "md" ? "text-base" : "text-sm"
     return (
         <div className={`flex gap-0.5 ${sz}`}>
-            {[1, 2, 3, 4, 5].map(i => (
-                <span key={i} className={i <= Math.round(valor) ? "text-amber-400" : "text-slate-200"}>★</span>
-            ))}
+            {[1, 2, 3, 4, 5].map(i => {
+                const pct = Math.max(0, Math.min(100, (valor - (i - 1)) * 100))
+                return (
+                    <span key={i} className="relative inline-block leading-none">
+                        <span className="text-slate-200">★</span>
+                        <span className="absolute inset-0 overflow-hidden text-amber-400" style={{ width: `${pct}%` }}>★</span>
+                    </span>
+                )
+            })}
         </div>
     )
 }
@@ -347,11 +354,25 @@ const Confiabilidad = () => {
                                                 {item.vehiculo.version}
                                             </span>
                                         )}
-                                        <div className="flex items-center gap-1.5 mt-1">
-                                            <Estrellas valor={item.puntajeGeneral} />
-                                            <span className="text-sm font-bold text-slate-700">{item.puntajeGeneral}</span>
-                                        </div>
-                                        <BadgeConfiabilidad puntaje={item.puntajeGeneral} />
+                                        {(() => {
+                                            // Si se ordenó por un aspecto específico (no general ni total),
+                                            // se muestra el puntaje de ese aspecto en vez del general
+                                            const mostrandoAspecto = ordenPor !== "puntajeGeneral" && ordenPor !== "totalValoraciones"
+                                            const puntajeMostrado = mostrandoAspecto ? item.aspectos?.[ordenPor] : item.puntajeGeneral
+                                            const labelAspecto = ORDEN_OPCIONES.find(o => o.value === ordenPor)?.label
+                                            return (
+                                                <>
+                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                        <Estrellas valor={puntajeMostrado} />
+                                                        <span className="text-sm font-bold text-slate-700">{puntajeMostrado}</span>
+                                                    </div>
+                                                    {mostrandoAspecto && (
+                                                        <p className="text-xs text-amber-600 font-medium -mt-1">{labelAspecto}</p>
+                                                    )}
+                                                    <BadgeConfiabilidad puntaje={item.puntajeGeneral} />
+                                                </>
+                                            )
+                                        })()}
                                         <p className="text-xs text-slate-400">
                                             {item.totalValoraciones} valoración(es)
                                         </p>

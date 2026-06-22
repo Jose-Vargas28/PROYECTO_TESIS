@@ -2,6 +2,7 @@ import Vehiculo from "../models/Vehiculo.js"
 import Reporte from "../models/Reporte.js"
 import cloudinary from "../config/cloudinary.js"
 import fs from "fs-extra"
+import mongoose from "mongoose"
 
 const LIMITE_DIARIO = 5
 const MAX_FOTOS = 5
@@ -299,6 +300,9 @@ export const guardarFotoPexels = async (req, res) => {
     }
 }
 
+const HORAS_COOLDOWN_ENLACE = 48
+const LIMITE_MENSUAL_ENLACES = 10
+
 // AGREGAR ENLACE DE SEGURIDAD (usuario logueado)
 export const agregarEnlace = async (req, res) => {
     try {
@@ -307,6 +311,43 @@ export const agregarEnlace = async (req, res) => {
 
         if (vehiculo.enlaces.length >= 10) {
             return res.status(400).json({ msg: "Este vehículo ya tiene el máximo de 10 enlaces" })
+        }
+
+        // Verificar cooldown: si este usuario eliminó un enlace de este vehículo recientemente
+        // (el admin está exento, ya que necesita poder corregir enlaces sin restricción)
+        if (req.userBDD.rol !== "admin") {
+            const cooldown = vehiculo.cooldownsEnlaces?.find(c => c.usuario.toString() === req.userBDD._id.toString())
+            if (cooldown) {
+                const horasDesdeEliminacion = (new Date() - new Date(cooldown.eliminadoEn)) / (1000 * 60 * 60)
+                if (horasDesdeEliminacion < HORAS_COOLDOWN_ENLACE) {
+                    const horasRestantes = Math.ceil(HORAS_COOLDOWN_ENLACE - horasDesdeEliminacion)
+                    return res.status(400).json({
+                        msg: `Eliminaste un enlace recientemente. Podrás agregar uno nuevo en ${horasRestantes}h.`
+                    })
+                }
+            }
+        }
+
+        // Verificar límite mensual: máximo de enlaces que un usuario puede agregar
+        // en los últimos 30 días, sin importar a qué vehículo (el admin está exento)
+        if (req.userBDD.rol !== "admin") {
+            const hace30Dias = new Date(); hace30Dias.setDate(hace30Dias.getDate() - 30)
+            const conteoMensual = await Vehiculo.aggregate([
+                { $unwind: "$enlaces" },
+                {
+                    $match: {
+                        "enlaces.creadoPor": new mongoose.Types.ObjectId(req.userBDD._id),
+                        "enlaces.createdAt": { $gte: hace30Dias }
+                    }
+                },
+                { $count: "total" }
+            ])
+            const totalEsteMes = conteoMensual[0]?.total || 0
+            if (totalEsteMes >= LIMITE_MENSUAL_ENLACES) {
+                return res.status(429).json({
+                    msg: `Has alcanzado el límite de ${LIMITE_MENSUAL_ENLACES} enlaces agregados en los últimos 30 días. Inténtalo más adelante.`
+                })
+            }
         }
 
         const { url, titulo, descripcion } = req.body
@@ -322,6 +363,12 @@ export const agregarEnlace = async (req, res) => {
             descripcion: (descripcion || "").trim().slice(0, 200),
             creadoPor: req.userBDD._id
         })
+
+        // Limpiar cualquier cooldown previo de este usuario al agregar exitosamente
+        if (vehiculo.cooldownsEnlaces?.length) {
+            vehiculo.cooldownsEnlaces = vehiculo.cooldownsEnlaces.filter(c => c.usuario.toString() !== req.userBDD._id.toString())
+        }
+
         await vehiculo.save()
 
         res.status(201).json({ msg: "Enlace agregado correctamente", enlaces: vehiculo.enlaces })
@@ -345,6 +392,17 @@ export const eliminarEnlace = async (req, res) => {
         const esPropietario = enlace.creadoPor?.toString() === req.userBDD._id.toString()
         if (!esAdmin && !esPropietario) {
             return res.status(403).json({ msg: "No tienes permiso para eliminar este enlace" })
+        }
+
+        // Registrar cooldown solo si un usuario normal (no admin) eliminó su propio enlace
+        if (esPropietario && !esAdmin) {
+            if (!vehiculo.cooldownsEnlaces) vehiculo.cooldownsEnlaces = []
+            const existente = vehiculo.cooldownsEnlaces.find(c => c.usuario.toString() === req.userBDD._id.toString())
+            if (existente) {
+                existente.eliminadoEn = new Date()
+            } else {
+                vehiculo.cooldownsEnlaces.push({ usuario: req.userBDD._id, eliminadoEn: new Date() })
+            }
         }
 
         enlace.deleteOne()

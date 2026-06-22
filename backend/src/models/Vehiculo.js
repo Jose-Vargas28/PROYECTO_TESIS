@@ -7,6 +7,13 @@ const enlaceSchema = new Schema({
     creadoPor:   { type: Schema.Types.ObjectId, ref: "User" }
 }, { _id: true, timestamps: true })
 
+// Registra cuándo un usuario eliminó su último enlace de este vehículo,
+// para aplicar un cooldown antes de poder agregar uno nuevo
+const cooldownEnlaceSchema = new Schema({
+    usuario: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    eliminadoEn: { type: Date, default: Date.now }
+}, { _id: false })
+
 const fotoSchema = new Schema({
     url: { type: String, required: true },
     publicId: { type: String, required: true },
@@ -37,6 +44,7 @@ const vehiculoSchema = new Schema({
     },
     fotos: [fotoSchema],
     enlaces: [enlaceSchema],
+    cooldownsEnlaces: [cooldownEnlaceSchema],
     ocultarFotoAuto: { type: Boolean, default: false },
     creadoPor: {
         type: Schema.Types.ObjectId,

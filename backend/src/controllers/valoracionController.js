@@ -6,6 +6,7 @@ const HORAS_VENTANA_CORRECCION = 48
 const MAX_EDICIONES_EN_VENTANA = 3
 const DIAS_COOLDOWN = 30
 const LIMITE_DIARIO = 5
+const LIMITE_MENSUAL = 10
 
 // Calcula el estado de edición de una valoración existente:
 // { puedeEditar, enVentanaCorreccion, horasRestantesVentana, diasRestantesCooldown }
@@ -78,13 +79,15 @@ export const crearOActualizarValoracion = async (req, res) => {
             }
         }
 
-        // Verificar si ya existe valoración del usuario para este vehículo
+        // Buscar valoración existente (activa o desactivada) — el índice único vehiculo+usuario
+        // significa que solo puede existir un documento por esa combinación
         const existente = await Valoracion.findOne({
             vehiculo: vehiculoId,
             usuario: req.userBDD._id
         })
 
-        if (existente) {
+        if (existente && existente.activo !== false) {
+            // ---- Caso 1: ya tiene una valoración activa (o sin el campo seteado aún) ----
             const estado = calcularEstadoEdicion(existente)
 
             if (!estado.puedeEditar) {
@@ -94,12 +97,11 @@ export const crearOActualizarValoracion = async (req, res) => {
                 })
             }
 
-            // Si seguía dentro de la ventana de corrección, incrementa el contador.
-            // Si el cooldown ya venció (fuera de ventana), se reinicia el contador a 1 (esta nueva edición).
             existente.edicionesEnVentana = estado.enVentanaCorreccion
                 ? (existente.edicionesEnVentana || 0) + 1
                 : 1
 
+            existente.activo = true
             existente.aspectos = aspectos
             existente.comentario = comentario?.trim()?.slice(0, 500) || ""
             await existente.save()
@@ -113,7 +115,34 @@ export const crearOActualizarValoracion = async (req, res) => {
             })
         }
 
-        // Verificar límite diario de valoraciones nuevas (5 por día)
+        if (existente && !existente.activo) {
+            // ---- Caso 2: el usuario había eliminado su valoración — se reactiva ----
+            // heredando el mismo cooldown que tenía antes de eliminarla (evita el
+            // atajo de "eliminar y crear de nuevo" para saltarse el cooldown de 30 días)
+            const estado = calcularEstadoEdicion(existente)
+
+            if (!estado.puedeEditar) {
+                return res.status(400).json({
+                    msg: `Eliminaste esta valoración recientemente. Podrás volver a valorar este vehículo en ${estado.diasRestantesCooldown} día(s).`,
+                    diasRestantes: estado.diasRestantesCooldown
+                })
+            }
+
+            existente.activo = true
+            existente.edicionesEnVentana = estado.enVentanaCorreccion
+                ? (existente.edicionesEnVentana || 0) + 1
+                : 1
+            existente.aspectos = aspectos
+            existente.comentario = comentario?.trim()?.slice(0, 500) || ""
+            await existente.save()
+
+            return res.status(201).json({
+                msg: "Valoración registrada correctamente",
+                valoracion: existente
+            })
+        }
+
+        // ---- Caso 3: nunca había valorado este vehículo — verificar límites diario y mensual ----
         const inicioDelDia = new Date(); inicioDelDia.setHours(0, 0, 0, 0)
         const finDelDia = new Date(); finDelDia.setHours(23, 59, 59, 999)
         const valoracionesHoy = await Valoracion.countDocuments({
@@ -123,6 +152,17 @@ export const crearOActualizarValoracion = async (req, res) => {
         if (valoracionesHoy >= LIMITE_DIARIO) {
             return res.status(429).json({
                 msg: `Has alcanzado el límite de ${LIMITE_DIARIO} valoraciones nuevas por día. Inténtalo mañana.`
+            })
+        }
+
+        const hace30Dias = new Date(); hace30Dias.setDate(hace30Dias.getDate() - 30)
+        const valoracionesEsteMes = await Valoracion.countDocuments({
+            usuario: req.userBDD._id,
+            createdAt: { $gte: hace30Dias }
+        })
+        if (valoracionesEsteMes >= LIMITE_MENSUAL) {
+            return res.status(429).json({
+                msg: `Has alcanzado el límite de ${LIMITE_MENSUAL} valoraciones nuevas en los últimos 30 días. Inténtalo más adelante.`
             })
         }
 
@@ -158,18 +198,19 @@ export const obtenerValoracionesVehiculo = async (req, res) => {
             .select("marca modelo anio tipo combustible fotos version enlaces ocultarFotoAuto")
         if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
 
-        const total = await Valoracion.countDocuments({ vehiculo: vehiculoId })
-        const valoraciones = await Valoracion.find({ vehiculo: vehiculoId })
+        const total = await Valoracion.countDocuments({ vehiculo: vehiculoId, activo: { $ne: false } })
+        const valoraciones = await Valoracion.find({ vehiculo: vehiculoId, activo: { $ne: false } })
             .populate("usuario", "nombre region provincia")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limite)
 
-        // Calcular promedios con todas las valoraciones (no solo la página)
-        const todasLasValoraciones = await Valoracion.find({ vehiculo: vehiculoId }).select("aspectos")
+        // Calcular promedios con todas las valoraciones activas (no solo la página)
+        const todasLasValoraciones = await Valoracion.find({ vehiculo: vehiculoId, activo: { $ne: false } }).select("aspectos")
         const resumen = calcularPromedios(todasLasValoraciones)
 
-        // Si el usuario está logueado, ver si ya valoró
+        // Si el usuario está logueado, ver si ya valoró (incluye valoraciones desactivadas
+        // para poder calcular el cooldown de reactivación)
         let miValoracion = null
         let puedoValorar = true
         let enVentanaCorreccion = false
@@ -177,12 +218,16 @@ export const obtenerValoracionesVehiculo = async (req, res) => {
         let diasRestantesCooldown = 0
 
         if (req.userBDD) {
-            miValoracion = await Valoracion.findOne({
+            const valoracionPropia = await Valoracion.findOne({
                 vehiculo: vehiculoId,
                 usuario: req.userBDD._id
             })
-            if (miValoracion) {
-                const estado = calcularEstadoEdicion(miValoracion)
+            // Solo se expone como "miValoracion" si está activa (para mostrarla en el form);
+            // si está desactivada, no se muestra pero sí se usa para calcular el cooldown.
+            // Los documentos antiguos sin el campo "activo" se tratan como activos.
+            if (valoracionPropia && valoracionPropia.activo !== false) {
+                miValoracion = valoracionPropia
+                const estado = calcularEstadoEdicion(valoracionPropia)
                 puedoValorar = estado.puedeEditar
                 enVentanaCorreccion = estado.enVentanaCorreccion
                 horasRestantesVentana = estado.horasRestantesVentana
@@ -214,8 +259,9 @@ export const rankingConfiabilidad = async (req, res) => {
     try {
         const { tipo, marca, minValoraciones = 1 } = req.query
 
-        // Agrupar valoraciones por vehículo
+        // Agrupar valoraciones por vehículo (solo activas)
         const pipeline = [
+            { $match: { activo: { $ne: false } } },
             {
                 $group: {
                     _id: "$vehiculo",
@@ -307,15 +353,115 @@ export const valoracionesDeUsuario = async (req, res) => {
     }
 }
 
+// LISTAR TODAS LAS VALORACIONES (admin) — para moderación, incluye activas e inactivas
+export const listarTodasValoraciones = async (req, res) => {
+    try {
+        const pagina = parseInt(req.query.pagina) || 1
+        const limite = 15
+        const skip = (pagina - 1) * limite
+        const busqueda = req.query.busqueda || ""
+        const soloConComentario = req.query.soloConComentario === "true"
+        const estado = req.query.estado || "" // "activo" | "eliminado" | ""
+
+        const filtro = {}
+        if (soloConComentario) filtro.comentario = { $ne: "" }
+        if (estado === "activo") filtro.activo = { $ne: false }
+        if (estado === "eliminado") filtro.activo = false
+
+        let valoraciones = await Valoracion.find(filtro)
+            .populate("usuario", "nombre email")
+            .populate("vehiculo", "marca modelo anio version")
+            .sort({ createdAt: -1 })
+
+        // Búsqueda por nombre de usuario, vehículo o contenido del comentario
+        if (busqueda) {
+            const b = busqueda.toLowerCase()
+            valoraciones = valoraciones.filter(v =>
+                v.usuario?.nombre?.toLowerCase().includes(b) ||
+                v.usuario?.email?.toLowerCase().includes(b) ||
+                v.vehiculo?.marca?.toLowerCase().includes(b) ||
+                v.vehiculo?.modelo?.toLowerCase().includes(b) ||
+                v.comentario?.toLowerCase().includes(b)
+            )
+        }
+
+        const total = valoraciones.length
+        const paginadas = valoraciones.slice(skip, skip + limite)
+
+        res.status(200).json({
+            valoraciones: paginadas,
+            total,
+            paginas: Math.ceil(total / limite),
+            paginaActual: pagina
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al listar valoraciones" })
+    }
+}
+
+// ELIMINAR VALORACIÓN COMO ADMIN (moderación — borrado lógico)
+export const eliminarValoracionAdmin = async (req, res) => {
+    try {
+        const valoracion = await Valoracion.findById(req.params.id)
+        if (!valoracion) return res.status(404).json({ msg: "Valoración no encontrada" })
+
+        valoracion.activo = false
+        await valoracion.save()
+
+        res.status(200).json({ msg: "Valoración eliminada por moderación" })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al eliminar la valoración" })
+    }
+}
+
+// RESTAURAR VALORACIÓN ELIMINADA (admin)
+export const restaurarValoracionAdmin = async (req, res) => {
+    try {
+        const valoracion = await Valoracion.findById(req.params.id)
+        if (!valoracion) return res.status(404).json({ msg: "Valoración no encontrada" })
+
+        valoracion.activo = true
+        await valoracion.save()
+
+        res.status(200).json({ msg: "Valoración restaurada" })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al restaurar la valoración" })
+    }
+}
+
+// MIS VEHÍCULOS YA VALORADOS (usuario logueado) — solo IDs, para marcar UI
+export const misVehiculosValorados = async (req, res) => {
+    try {
+        const valoraciones = await Valoracion.find({
+            usuario: req.userBDD._id,
+            activo: { $ne: false }
+        }).select("vehiculo")
+
+        const vehiculoIds = valoraciones.map(v => v.vehiculo.toString())
+        res.status(200).json({ vehiculoIds })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Error al obtener tus valoraciones" })
+    }
+}
+
 // ELIMINAR VALORACIÓN PROPIA
 export const eliminarValoracion = async (req, res) => {
     try {
         const valoracion = await Valoracion.findOne({
             _id: req.params.id,
-            usuario: req.userBDD._id
+            usuario: req.userBDD._id,
+            activo: { $ne: false }
         })
         if (!valoracion) return res.status(404).json({ msg: "Valoración no encontrada" })
-        await valoracion.deleteOne()
+
+        // Borrado lógico: se conserva el documento para heredar el cooldown si se reactiva
+        valoracion.activo = false
+        await valoracion.save()
+
         res.status(200).json({ msg: "Valoración eliminada" })
     } catch (error) {
         res.status(500).json({ msg: "Error al eliminar" })

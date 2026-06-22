@@ -28,6 +28,7 @@ import AdminPendientes from "./pages/AdminPendientes"
 import AdminEliminados from "./pages/AdminEliminados"
 import AdminCatalogos from "./pages/AdminCatalogos"
 import AdminUsuarios from "./pages/AdminUsuarios"
+import AdminValoraciones from "./pages/AdminValoraciones"
 
 // Rutas protegidas
 import PublicRoute from "./routes/PublicRoute"
@@ -99,6 +100,14 @@ function App() {
                         element={
                             <AdminRoute>
                                 <AdminUsuarios />
+                            </AdminRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/valoraciones"
+                        element={
+                            <AdminRoute>
+                                <AdminValoraciones />
                             </AdminRoute>
                         }
                     />

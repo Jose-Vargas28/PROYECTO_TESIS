@@ -6,7 +6,6 @@
 //  ⚠️  Elimina todos los usuarios (no admin), vehículos,
 //      fallas, reportes y valoraciones existentes
 
-
 import mongoose from "mongoose"
 import bcrypt from "bcryptjs"
 import dotenv from "dotenv"

@@ -567,7 +567,7 @@ const ReportarFalla = () => {
                                 ¿Quieres valorar tu experiencia general con este vehículo? Puedes hacerlo ahora o después desde <strong>Confiabilidad</strong>.
                             </p>
                             <div className="flex flex-col gap-3 max-w-xs mx-auto">
-                                <button type="button" onClick={() => navigate(`/dashboard/confiabilidad/${vehiculoReportado?.id}`)}
+                                <button type="button" onClick={() => navigate(`/dashboard/confiabilidad/${vehiculoReportado?.id}?confirmado=true`)}
                                     className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg transition-colors">
                                     ⭐ Valorar este vehículo ahora
                                 </button>
@@ -600,7 +600,7 @@ const ReportarFalla = () => {
                                     className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg transition-colors">
                                     Ir a mis reportes
                                 </button>
-                                <button type="button" onClick={() => navigate(`/dashboard/confiabilidad/${vehiculoReportado?.id}`)}
+                                <button type="button" onClick={() => navigate(`/dashboard/confiabilidad/${vehiculoReportado?.id}?confirmado=true`)}
                                     className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg transition-colors">
                                     ⭐ Valorar este vehículo
                                 </button>

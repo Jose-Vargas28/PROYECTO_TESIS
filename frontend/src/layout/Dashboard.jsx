@@ -60,6 +60,7 @@ const Dashboard = () => {
         { to: "/dashboard/admin/pendientes", label: "Validar reportes" },
         { to: "/dashboard/admin/usuarios", label: "Usuarios" },
         { to: "/dashboard/admin/catalogos", label: "Catálogos" },
+        { to: "/dashboard/admin/valoraciones", label: "Moderar valoraciones" },
         { to: "/dashboard/admin/eliminados", label: "Papelera / Auditoría" },
     ]
 

@@ -8,6 +8,7 @@ import Paginacion from "../components/ui/Paginacion"
 import ModalConfirmar from "../components/ui/ModalConfirmar"
 import useFetch from "../hooks/useFetch"
 import LogoMarca from "../components/ui/LogoMarca"
+import { getMisVehiculosValorados } from "../services/valoracionService"
 
 const formatearFecha = (fecha) => {
     if (!fecha) return "—"
@@ -26,6 +27,14 @@ const MisReportes = () => {
     const [totalPaginas, setTotalPaginas] = useState(1)
     const [total, setTotal] = useState(0)
     const [modalEliminar, setModalEliminar] = useState(null)
+    const [vehiculosValorados, setVehiculosValorados] = useState([])
+
+    const cargarValorados = useCallback(async () => {
+        try {
+            const res = await getMisVehiculosValorados()
+            setVehiculosValorados(res.data.vehiculoIds || [])
+        } catch (error) { console.error(error) }
+    }, [])
 
     const cargar = useCallback(async (pag = 1, busq = "") => {
         setCargando(true)
@@ -43,7 +52,7 @@ const MisReportes = () => {
         setCargando(false)
     }, [token])
 
-    useEffect(() => { cargar() }, [])
+    useEffect(() => { cargar(); cargarValorados() }, [])
 
     useEffect(() => {
         const t = setTimeout(() => { setPagina(1); cargar(1, busqueda) }, 400)
@@ -126,14 +135,25 @@ const MisReportes = () => {
                                                 👁 Ver detalle
                                             </button>
                                         )}
-                                        {/* Botón valorar vehículo — siempre visible si hay vehiculo */}
+                                        {/* Valorar vehículo — condicional según si ya lo valoró */}
                                         {r.vehiculo?._id && (
-                                            <button type="button"
-                                                onClick={() => navigate(`/dashboard/confiabilidad/${r.vehiculo._id}`)}
-                                                className="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                                                title="Ir a valorar este vehículo en Confiabilidad">
-                                                ⭐ Valorar
-                                            </button>
+                                            vehiculosValorados.includes(r.vehiculo._id) ? (
+                                                <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 text-xs px-3 py-1.5 rounded-lg">
+                                                    <span>✅ Ya valoraste este vehículo</span>
+                                                    <button type="button"
+                                                        onClick={() => navigate(`/dashboard/confiabilidad/${r.vehiculo._id}?confirmado=true`)}
+                                                        className="underline font-semibold hover:text-green-800">
+                                                        Revisar
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button type="button"
+                                                    onClick={() => navigate(`/dashboard/confiabilidad/${r.vehiculo._id}?confirmado=true`)}
+                                                    className="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                                    title="Ir a valorar este vehículo en Confiabilidad">
+                                                    ⭐ Valorar
+                                                </button>
+                                            )
                                         )}
                                     </div>
                                 </div>

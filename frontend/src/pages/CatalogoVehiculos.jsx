@@ -220,6 +220,7 @@ const CatalogoVehiculos = () => {
     const [guardandoPexels, setGuardandoPexels] = useState(null)
     const [modalEliminarFoto, setModalEliminarFoto] = useState(null)
     const inputFotoRef = useRef(null)
+    const [modalAdvertenciaValorar, setModalAdvertenciaValorar] = useState(null)
 
     const cargar = useCallback(async (pag = 1, busq = "", tipo = "", marca = "") => {
         setCargando(true)
@@ -499,11 +500,19 @@ const CatalogoVehiculos = () => {
                                                 🖼 Gestionar fotos ({v.fotos?.length || 0}/5)
                                             </button>
                                         ) : (
-                                            <button type="button"
-                                                onClick={() => navigate(`/dashboard/reportes?vehiculo=${v._id}`)}
-                                                className="w-full bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-2 py-1.5 rounded-lg transition-colors">
-                                                Ver reportes
-                                            </button>
+                                            <div className="flex gap-1.5">
+                                                <button type="button"
+                                                    onClick={() => navigate(`/dashboard/reportes?vehiculo=${v._id}`)}
+                                                    className="flex-1 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-2 py-1.5 rounded-lg transition-colors">
+                                                    Ver reportes
+                                                </button>
+                                                <button type="button"
+                                                    onClick={() => setModalAdvertenciaValorar(v._id)}
+                                                    title="Valorar este vehículo"
+                                                    className="shrink-0 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors">
+                                                    ⭐
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -704,6 +713,35 @@ const CatalogoVehiculos = () => {
                     onConfirmar={handleEliminarFoto}
                     onCancelar={() => setModalEliminarFoto(null)}
                 />
+            )}
+
+            {/* Modal advertencia antes de valorar */}
+            {modalAdvertenciaValorar && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span className="text-2xl">⭐</span>
+                        </div>
+                        <h3 className="font-bold text-slate-800 text-lg text-center mb-2">Antes de valorar</h3>
+                        <p className="text-slate-500 text-sm text-center mb-3">
+                            Solo valora este vehículo si has tenido <strong>experiencia real o conocimiento directo</strong> con él (lo posees, lo conduces habitualmente o lo conoces a fondo).
+                        </p>
+                        <p className="text-slate-400 text-xs text-center mb-5">
+                            Las valoraciones son limitadas y se revisan periódicamente. Si se detecta mal uso (opiniones falsas, repetidas o sin fundamento) la cuenta puede ser suspendida.
+                        </p>
+                        <div className="flex gap-3">
+                            <button type="button" onClick={() => setModalAdvertenciaValorar(null)}
+                                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-lg text-sm">
+                                Cancelar
+                            </button>
+                            <button type="button"
+                                onClick={() => { const id = modalAdvertenciaValorar; setModalAdvertenciaValorar(null); navigate(`/dashboard/confiabilidad/${id}?confirmado=true`) }}
+                                className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg text-sm">
+                                Continuar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )

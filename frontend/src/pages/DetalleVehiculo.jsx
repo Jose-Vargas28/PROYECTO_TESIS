@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useParams, useNavigate } from "react-router"
+import { useParams, useNavigate, useSearchParams } from "react-router"
 import { ToastContainer, toast } from "react-toastify"
 import { getValoracionesVehiculo, crearValoracion, eliminarValoracion } from "../services/valoracionService"
 import { agregarEnlaceVehiculo, eliminarEnlaceVehiculo } from "../services/catalogoService"
@@ -33,13 +33,20 @@ const EstrellasInput = ({ valor, onChange }) => (
 )
 
 // Estrellas solo lectura
+// Estrellas con relleno parcial (ej: 4.3 = 4 llenas + la 5ta al 30%)
 const Estrellas = ({ valor, size = "sm" }) => {
     const sz = size === "lg" ? "text-2xl" : size === "md" ? "text-lg" : "text-base"
     return (
         <div className={`flex gap-0.5 ${sz}`}>
-            {[1,2,3,4,5].map(i => (
-                <span key={i} className={i <= Math.round(valor) ? "text-amber-400" : "text-slate-200"}>★</span>
-            ))}
+            {[1, 2, 3, 4, 5].map(i => {
+                const pct = Math.max(0, Math.min(100, (valor - (i - 1)) * 100))
+                return (
+                    <span key={i} className="relative inline-block leading-none">
+                        <span className="text-slate-200">★</span>
+                        <span className="absolute inset-0 overflow-hidden text-amber-400" style={{ width: `${pct}%` }}>★</span>
+                    </span>
+                )
+            })}
         </div>
     )
 }
@@ -64,12 +71,15 @@ const formatearFecha = (f) => new Date(f).toLocaleDateString("es-EC", { day: "2-
 const DetalleVehiculo = () => {
     const { id } = useParams()
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
+    const confirmado = searchParams.get("confirmado") === "true"
     const { token, _id: userId, rol } = storeAuth()
 
     const [datos, setDatos] = useState(null)
     const [cargando, setCargando] = useState(true)
     const [pagina, setPagina] = useState(1)
     const [mostrarFormulario, setMostrarFormulario] = useState(false)
+    const [modalAdvertenciaValorar, setModalAdvertenciaValorar] = useState(false)
     const [enviando, setEnviando] = useState(false)
     const [modalEliminar, setModalEliminar] = useState(false)
     const [fotoSrc, setFotoSrc] = useState(null)
@@ -85,6 +95,22 @@ const DetalleVehiculo = () => {
     const [enviandoEnlace, setEnviandoEnlace] = useState(false)
     const [modalEliminarEnlace, setModalEliminarEnlace] = useState(null)
     const [enlaces, setEnlaces] = useState([])
+
+    const handleClickValorar = () => {
+        // Se salta la advertencia si ya viene confirmado desde otro flujo
+        // (reportó la falla, vio el aviso en el catálogo de vehículos) o si
+        // ya tiene una valoración previa (ya pasó por la advertencia antes).
+        if (confirmado || datos?.miValoracion) {
+            setMostrarFormulario(true)
+        } else {
+            setModalAdvertenciaValorar(true)
+        }
+    }
+
+    const confirmarYAbrirFormulario = () => {
+        setModalAdvertenciaValorar(false)
+        setMostrarFormulario(true)
+    }
 
     const cargar = async (pag = 1) => {
         setCargando(true)
@@ -265,7 +291,7 @@ const DetalleVehiculo = () => {
                                     </p>
                                 )}
                                 {(puedoValorar || !miValoracion) && (
-                                    <button type="button" onClick={() => setMostrarFormulario(true)}
+                                    <button type="button" onClick={handleClickValorar}
                                         className="bg-blue-900 hover:bg-blue-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
                                         {miValoracion ? "✏️ Actualizar" : "⭐ Valorar"}
                                     </button>
@@ -493,6 +519,34 @@ const DetalleVehiculo = () => {
                     onConfirmar={handleEliminarEnlace}
                     onCancelar={() => setModalEliminarEnlace(null)}
                 />
+            )}
+
+            {/* Modal advertencia antes de valorar */}
+            {modalAdvertenciaValorar && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span className="text-2xl">⭐</span>
+                        </div>
+                        <h3 className="font-bold text-slate-800 text-lg text-center mb-2">Antes de valorar</h3>
+                        <p className="text-slate-500 text-sm text-center mb-3">
+                            Solo valora este vehículo si has tenido <strong>experiencia real o conocimiento directo</strong> con él (lo posees, lo conduces habitualmente o lo conoces a fondo).
+                        </p>
+                        <p className="text-slate-400 text-xs text-center mb-5">
+                            Las valoraciones son limitadas y se revisan periódicamente. Si se detecta mal uso (opiniones falsas, repetidas o sin fundamento) la cuenta puede ser suspendida.
+                        </p>
+                        <div className="flex gap-3">
+                            <button type="button" onClick={() => setModalAdvertenciaValorar(false)}
+                                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-lg text-sm">
+                                Cancelar
+                            </button>
+                            <button type="button" onClick={confirmarYAbrirFormulario}
+                                className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg text-sm">
+                                Continuar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )
