@@ -35,7 +35,7 @@ const AdminCatalogos = () => {
     const [detalleVehiculo, setDetalleVehiculo] = useState(null)
     const [editarVehiculo, setEditarVehiculo] = useState(null)
     const [eliminarVehiculoModal, setEliminarVehiculoModal] = useState(null)
-    const [formVehiculo, setFormVehiculo] = useState({ marca: "", modelo: "", anio: "", version: "", tipo: "automóvil", combustible: "gasolina" })
+    const [formVehiculo, setFormVehiculo] = useState({ marca: "", modelo: "", anio: "", version: "", tipo: "automóvil", combustible: "gasolina", transmision: "", traccion: "", potencia: "", torque: "", airbags: "", peso: "", turbo: "", cilindraje: "", cilindros: "" })
     const [anioManualModal, setAnioManualModal] = useState(false)
     const [mostrarFormCrearV, setMostrarFormCrearV] = useState(false)
     const [formCrearV, setFormCrearV] = useState({ marca: "", modelo: "", anio: "", version: "", tipo: "automóvil", combustible: "gasolina" })
@@ -116,7 +116,15 @@ const AdminCatalogos = () => {
 
     // ---- Vehículos ----
     const abrirEditarVehiculo = (v) => {
-        setFormVehiculo({ marca: v.marca, modelo: v.modelo, anio: v.anio, version: v.version || "", tipo: v.tipo || "automóvil", combustible: v.combustible || "gasolina" })
+        setFormVehiculo({
+            marca: v.marca, modelo: v.modelo, anio: v.anio, version: v.version || "",
+            tipo: v.tipo || "automóvil", combustible: v.combustible || "gasolina",
+            transmision: v.transmision || "", traccion: v.traccion || "",
+            potencia: v.potencia ?? "", torque: v.torque ?? "",
+            airbags: v.airbags ?? "", peso: v.peso ?? "",
+            turbo: v.turbo === true ? "true" : v.turbo === false ? "false" : "",
+            cilindraje: v.cilindraje ?? "", cilindros: v.cilindros ?? ""
+        })
         setAnioManualModal(!aniosVehiculo.includes(Number(v.anio)))
         setEditarVehiculo(v)
     }
@@ -126,8 +134,17 @@ const AdminCatalogos = () => {
         try {
             const res = await actualizarVehiculo(editarVehiculo._id, {
                 marca: formVehiculo.marca, modelo: formVehiculo.modelo,
-                anio: Number(formVehiculo.anio), version: formVehiculo.version || "",
-                tipo: formVehiculo.tipo, combustible: formVehiculo.combustible
+                anio: Number(formVehiculo.anio), version: formVehiculo.version.trim() || "Estándar",
+                tipo: formVehiculo.tipo, combustible: formVehiculo.combustible,
+                transmision: formVehiculo.transmision || null,
+                traccion: formVehiculo.traccion || null,
+                potencia: formVehiculo.potencia !== "" ? Number(formVehiculo.potencia) : null,
+                torque: formVehiculo.torque !== "" ? Number(formVehiculo.torque) : null,
+                airbags: formVehiculo.airbags !== "" ? Number(formVehiculo.airbags) : null,
+                peso: formVehiculo.peso !== "" ? Number(formVehiculo.peso) : null,
+                turbo: formVehiculo.turbo === "true" ? true : formVehiculo.turbo === "false" ? false : null,
+                cilindraje: formVehiculo.cilindraje !== "" ? Number(formVehiculo.cilindraje) : null,
+                cilindros:  formVehiculo.cilindros  !== "" ? Number(formVehiculo.cilindros)  : null,
             })
             toast.success(res.data.msg)
             setEditarVehiculo(null)
@@ -418,7 +435,7 @@ const AdminCatalogos = () => {
             {/* Modal editar vehículo */}
             {editarVehiculo && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                         <h3 className="text-xl font-bold text-slate-700 mb-4">Editar vehículo</h3>
                         <div className="space-y-3">
                             <div><label className="mb-2 block text-sm font-semibold text-slate-700">Marca</label>
@@ -459,6 +476,91 @@ const AdminCatalogos = () => {
                                     value={formVehiculo.version}
                                     onChange={(e) => setFormVehiculo({ ...formVehiculo, version: e.target.value })} />
                                 <p className="text-xs text-slate-400 mt-1">Máx. 20 caracteres</p>
+                            </div>
+
+                            {/* Características técnicas */}
+                            <div className="border-t border-slate-100 pt-3 mt-1">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Características técnicas <span className="font-normal normal-case">(opcional)</span></p>
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="mb-1 block text-sm font-semibold text-slate-700">Transmisión</label>
+                                            <select className={inputClass} value={formVehiculo.transmision}
+                                                onChange={e => setFormVehiculo({ ...formVehiculo, transmision: e.target.value })}>
+                                                <option value="">— Sin datos —</option>
+                                                <option value="manual">Manual</option>
+                                                <option value="automática">Automática</option>
+                                                <option value="automática doble embrague">Automática doble embrague</option>
+                                                <option value="CVT">CVT</option>
+                                                <option value="e-CVT">e-CVT</option>
+                                                <option value="semi-automática">Semi-automática</option>
+                                                <option value="directa">Directa (eléctrico)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="mb-1 block text-sm font-semibold text-slate-700">Tracción</label>
+                                            <select className={inputClass} value={formVehiculo.traccion}
+                                                onChange={e => setFormVehiculo({ ...formVehiculo, traccion: e.target.value })}>
+                                                <option value="">— Sin datos —</option>
+                                                <option value="delantera">Delantera</option>
+                                                <option value="trasera">Trasera</option>
+                                                <option value="4x4">4x4</option>
+                                                <option value="AWD">AWD</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="mb-1 block text-sm font-semibold text-slate-700">Potencia (CV)</label>
+                                            <input type="number" min="0" max="2000" className={inputClass} placeholder="Ej: 150"
+                                                value={formVehiculo.potencia}
+                                                onChange={e => setFormVehiculo({ ...formVehiculo, potencia: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-1 block text-sm font-semibold text-slate-700">Torque (Nm)</label>
+                                            <input type="number" min="0" max="2000" className={inputClass} placeholder="Ej: 320"
+                                                value={formVehiculo.torque}
+                                                onChange={e => setFormVehiculo({ ...formVehiculo, torque: e.target.value })} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="mb-1 block text-sm font-semibold text-slate-700">Airbags</label>
+                                            <input type="number" min="0" max="20" className={inputClass} placeholder="Ej: 6"
+                                                value={formVehiculo.airbags}
+                                                onChange={e => setFormVehiculo({ ...formVehiculo, airbags: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-1 block text-sm font-semibold text-slate-700">Peso (kg)</label>
+                                            <input type="number" min="0" max="10000" className={inputClass} placeholder="Ej: 1450"
+                                                value={formVehiculo.peso}
+                                                onChange={e => setFormVehiculo({ ...formVehiculo, peso: e.target.value })} />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-semibold text-slate-700">Turbo</label>
+                                        <select className={inputClass} value={formVehiculo.turbo}
+                                            onChange={e => setFormVehiculo({ ...formVehiculo, turbo: e.target.value })}>
+                                            <option value="">— Sin datos —</option>
+                                            <option value="true">Sí — con turbo</option>
+                                            <option value="false">No — aspiración natural</option>
+                                        </select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="mb-1 block text-sm font-semibold text-slate-700">Cilindraje (cc)</label>
+                                            <input type="number" min="0" max="10000" className={inputClass} placeholder="Ej: 1984"
+                                                value={formVehiculo.cilindraje}
+                                                onChange={e => setFormVehiculo({ ...formVehiculo, cilindraje: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label className="mb-1 block text-sm font-semibold text-slate-700">Cilindros</label>
+                                            <input type="number" min="1" max="16" className={inputClass} placeholder="Ej: 4"
+                                                value={formVehiculo.cilindros}
+                                                onChange={e => setFormVehiculo({ ...formVehiculo, cilindros: e.target.value })} />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div className="flex gap-3 mt-6">

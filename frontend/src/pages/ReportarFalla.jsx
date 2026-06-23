@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router"
+import storeUI from "../context/storeUI"
 import { ToastContainer, toast } from "react-toastify"
 import {
     crearReporte,
@@ -52,6 +53,29 @@ const ReportarFalla = () => {
     const [enlaceUrl, setEnlaceUrl] = useState("")
     const [enlaceTitulo, setEnlaceTitulo] = useState("")
 
+    const { setFormDirty } = storeUI()
+
+    // Marcar formulario como sucio cuando hay datos ingresados
+    const hayDatosIngresados = !!(marca || vehiculoId || fallaId || descripcion || paso === 2)
+
+    useEffect(() => {
+        setFormDirty(hayDatosIngresados)
+    }, [hayDatosIngresados])
+
+    // Limpiar al desmontar (cuando el reporte se envía o el usuario confirma salir)
+    useEffect(() => {
+        return () => setFormDirty(false)
+    }, [])
+
+    // Advertir al cerrar o recargar la pestaña
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (hayDatosIngresados) { e.preventDefault(); e.returnValue = "" }
+        }
+        window.addEventListener("beforeunload", handleBeforeUnload)
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+    }, [hayDatosIngresados])
+
     const cargarCatalogos = async () => {
         try {
             const [v, f] = await Promise.all([
@@ -88,6 +112,12 @@ const ReportarFalla = () => {
 
     // ---- Cancelar — vuelve al paso 1 y limpia evidencias (nada en servidor aún) ----
     const handleCancelar = () => {
+        // Limpiar paso 1
+        setMarca(""); setModelo(""); setAnioSeleccionado(""); setVehiculoId("")
+        setVersion(""); setFallaId(""); setGravedad("media"); setDescripcion("")
+        setMostrarFormVehiculo(false); setMostrarFormFalla(false)
+        setVehiculoReportado(null)
+        // Limpiar paso 2
         setImagenesSeleccionadas([])
         setDocumentosSeleccionados([])
         setEnlacesAgregados([])
@@ -104,7 +134,7 @@ const ReportarFalla = () => {
         try {
             const res = await crearVehiculo({
                 marca: nuevoVehiculo.marca, modelo: nuevoVehiculo.modelo,
-                anio: Number(nuevoVehiculo.anio), version: nuevoVehiculo.version || "",
+                anio: Number(nuevoVehiculo.anio), version: nuevoVehiculo.version.trim() || "Estándar",
                 tipo: nuevoVehiculo.tipo, combustible: nuevoVehiculo.combustible
             })
             toast.success(res.data.msg)
@@ -137,6 +167,7 @@ const ReportarFalla = () => {
     const handleContinuarAPaso2 = () => {
         if (!vehiculoId) return toast.error("Selecciona el vehículo completo")
         if (!fallaId) return toast.error("Selecciona una falla")
+        if (!descripcion.trim()) return toast.error("Describe el problema antes de continuar")
         const v = vehiculos.find(v => v._id === vehiculoId)
         if (v) setVehiculoReportado({ id: v._id, marca: v.marca, modelo: v.modelo, version: v.version || "" })
         setPaso(2)
@@ -237,13 +268,21 @@ const ReportarFalla = () => {
             <div className="flex justify-between items-start mb-2">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-800">Reportar una falla</h1>
-                    <p className="text-slate-500 text-sm mt-1">Selecciona el vehículo y la falla. Si no están en la lista, puedes registrarlos.</p>
+                    {paso === 1 && (
+                        <p className="text-slate-500 text-sm mt-1">Selecciona el vehículo y la falla. Si no están en la lista, puedes registrarlos.</p>
+                    )}
                 </div>
                 {paso === 2 && (
-                    <button type="button" onClick={() => setModalCancelar(true)}
-                        className="shrink-0 text-sm text-red-500 hover:underline mt-1">
-                        Cancelar
-                    </button>
+                    <div className="flex gap-3 items-center mt-1">
+                        <button type="button" onClick={() => setPaso(1)}
+                            className="text-sm text-blue-700 hover:underline font-medium">
+                            ← Volver al paso 1
+                        </button>
+                        <button type="button" onClick={() => setModalCancelar(true)}
+                            className="shrink-0 bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -252,6 +291,17 @@ const ReportarFalla = () => {
             {/* PASO 1 — Datos */}
             {paso === 1 && (
                 <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
+
+                    {/* Mensaje informativo */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs text-blue-800 font-semibold mb-1">💡 ¿No encuentras tu vehículo?</p>
+                        <p className="text-xs text-blue-700">
+                            Si el vehículo que buscas no aparece en la lista, o aparece pero con un año o versión diferente al tuyo,
+                            usa el botón <strong>"+ Registrar nuevo vehículo"</strong> para agregarlo.
+                            Cada combinación de marca, modelo, año y versión es un vehículo independiente en el sistema.
+                        </p>
+                    </div>
+
                     {/* Vehículo */}
                     <div>
                         <div className="flex justify-between items-center mb-3">
@@ -300,6 +350,11 @@ const ReportarFalla = () => {
                                         maxLength={20} value={nuevoVehiculo.version}
                                         onChange={e => setNuevoVehiculo({ ...nuevoVehiculo, version: e.target.value })} />
                                     <p className="text-xs text-slate-400 mt-1">Ej: 1.5 MT · 2.0 AT · 4x4 AWD · Hatchback</p>
+                                    {!nuevoVehiculo.version && (
+                                        <p className="text-xs text-blue-600 mt-1">
+                                            💡 Si no indicas una versión, se asignará <strong>Estándar</strong> automáticamente.
+                                        </p>
+                                    )}
                                 </div>
                                 <button type="button" onClick={handleCrearVehiculo}
                                     className="bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded-lg w-full">
@@ -360,13 +415,16 @@ const ReportarFalla = () => {
 
                     {/* Falla */}
                     <div>
-                        <div className="flex justify-between items-center mb-3">
+                        <div className="flex justify-between items-center mb-2">
                             <h3 className="font-bold text-slate-700">Tipo de falla</h3>
                             <button type="button" onClick={() => setMostrarFormFalla(!mostrarFormFalla)}
                                 className="text-sm text-blue-700 hover:underline">
                                 {mostrarFormFalla ? "Cancelar" : "+ Registrar nueva falla"}
                             </button>
                         </div>
+                        <p className="text-xs text-slate-400 mb-3">
+                            Si la falla no está en la lista, regístrala con <strong>"+ Registrar nueva falla"</strong>. La gravedad la defines tú según la severidad con la que experimentaste el problema.
+                        </p>
                         {mostrarFormFalla ? (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                                 <input className={inputClass} placeholder="Nombre de la falla"
@@ -413,7 +471,20 @@ const ReportarFalla = () => {
                         <textarea className={`${inputClass} h-28 resize-none`}
                             placeholder="Describe la falla con detalle..."
                             value={descripcion} onChange={e => setDescripcion(e.target.value)} />
+                        <p className="text-xs text-slate-400 mt-1">
+                            ⚠️ Proporciona una descripción clara y detallada de la falla. Sin una descripción adecuada el reporte puede ser devuelto para corrección o eliminado según corresponda.
+                        </p>
                     </div>
+
+                    {(marca || vehiculoId || fallaId || descripcion) && (
+                        <div className="flex justify-end">
+                            <button type="button"
+                                onClick={() => { setMarca(""); setModelo(""); setAnioSeleccionado(""); setVehiculoId(""); setVersion(""); setFallaId(""); setGravedad("media"); setDescripcion(""); setMostrarFormVehiculo(false); setMostrarFormFalla(false) }}
+                                className="text-sm text-slate-400 hover:text-red-500 hover:underline transition-colors">
+                                🗑 Limpiar campos
+                            </button>
+                        </div>
+                    )}
 
                     <button type="button" onClick={handleContinuarAPaso2}
                         className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg transition-colors">
@@ -425,8 +496,17 @@ const ReportarFalla = () => {
             {/* PASO 2 — Evidencias (todo en memoria) */}
             {paso === 2 && (
                 <div className="space-y-4">
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
-                        💡 Las evidencias que agregues aquí se subirán todas juntas al confirmar al final. Aún no se ha creado el reporte.
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 space-y-1">
+                        <p className="font-semibold">📋 Recomendaciones para una validación rápida</p>
+                        <ul className="text-xs space-y-1 list-disc pl-4 text-amber-700">
+                            <li>Adjunta <strong>fotos claras</strong> del problema: tablero, motor, neumáticos o la parte afectada.</li>
+                            <li>Si tienes <strong>facturas o recibos</strong> de taller relacionados con la falla, inclúyelos como documentos.</li>
+                            <li>Un <strong>enlace a un video</strong> que muestre la falla en funcionamiento es la evidencia más sólida.</li>
+                            <li>Los reportes sin evidencia pueden ser <strong>devueltos para corrección o eliminados</strong> si no se puede verificar la falla.</li>
+                        </ul>
+                        <p className="text-xs text-amber-600 pt-1 border-t border-amber-200 mt-1">
+                            ℹ️ Las evidencias se subirán todas juntas al confirmar el reporte al final. Aún no se ha creado ningún reporte.
+                        </p>
                     </div>
 
                     {/* Imágenes — solo selección, sin botón de subida */}
@@ -514,7 +594,13 @@ const ReportarFalla = () => {
                     {/* Enlaces — solo en memoria */}
                     <div className="bg-white rounded-xl shadow-lg p-6">
                         <h3 className="text-lg font-bold text-slate-700 mb-1">🔗 Enlaces de referencia</h3>
-                        <p className="text-slate-400 text-sm mb-4">YouTube (reseñas/fallas) o fuentes externas.</p>
+                        <p className="text-slate-500 text-sm mb-2">
+                            Puedes adjuntar enlaces de <strong>YouTube, Google Drive, Facebook, TikTok</strong> u otras fuentes donde se muestre la falla.
+                        </p>
+                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4 text-xs text-slate-500 space-y-1">
+                            <p>📹 Si tienes un video propio de la falla, <strong>súbelo a YouTube, Google Drive o cualquier servicio en la nube</strong> y pega aquí el enlace.</p>
+                            <p>⚠️ Si en algún momento el enlace deja de funcionar, envía un correo a <strong>{import.meta.env.VITE_CORREO_CONTACTO || "la administración"}</strong> indicando el reporte y el nuevo enlace para corregirlo.</p>
+                        </div>
                         <div className="space-y-3">
                             <input className={inputClass} placeholder="https://..." value={enlaceUrl} onChange={e => setEnlaceUrl(e.target.value)} />
                             <input className={inputClass} placeholder="Título o descripción (opcional)" value={enlaceTitulo} onChange={e => setEnlaceTitulo(e.target.value)} />

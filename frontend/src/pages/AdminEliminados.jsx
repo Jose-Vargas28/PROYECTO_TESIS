@@ -91,7 +91,7 @@ const AdminEliminados = () => {
                                         <td className="p-3 text-center">{r.vehiculo?.marca}</td>
                                         <td className="p-3 text-center">{r.vehiculo?.modelo}</td>
                                         <td className="p-3 text-center">{r.falla?.nombre}</td>
-                                        <td className="p-3 text-sm text-center">{r.eliminadoPor?.nombre || "—"}</td>
+                                        <td className="p-3 text-sm text-center">{r.eliminadoPor?.nombre} {r.eliminadoPor?.apellido || "—"}</td>
                                         <td className="p-3 text-sm text-slate-500 text-center">{formatearFecha(r.eliminadoEn)}</td>
                                         <td className="p-3">
                                             <button type="button" onClick={() => setModalRestaurar(r)}

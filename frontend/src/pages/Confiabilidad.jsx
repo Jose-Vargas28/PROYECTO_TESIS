@@ -188,6 +188,7 @@ const Confiabilidad = () => {
     const [ordenPor, setOrdenPor] = useState("puntajeGeneral")
     const [ordenDir, setOrdenDir] = useState("desc") // desc = mayor a menor
     const [filtroClasificacion, setFiltroClasificacion] = useState("") // "mejores" | "peores" | ""
+    const [filtroAnio, setFiltroAnio] = useState("")
     const [pagina, setPagina] = useState(1)
     const POR_PAGINA = 12
     const [lightbox, setLightbox] = useState(null)
@@ -210,6 +211,7 @@ const Confiabilidad = () => {
             if (busqueda && !`${r.vehiculo.marca} ${r.vehiculo.modelo}`.toLowerCase().includes(busqueda.toLowerCase())) return false
             if (filtroClasificacion === "mejores" && r.puntajeGeneral < 4) return false
             if (filtroClasificacion === "peores" && r.puntajeGeneral > 2.5) return false
+            if (filtroAnio && String(r.vehiculo.anio) !== filtroAnio) return false
             return true
         })
         .sort((a, b) => {
@@ -225,8 +227,9 @@ const Confiabilidad = () => {
     const totalPaginas = Math.ceil(rankingProcesado.length / POR_PAGINA)
     const rankingPagina = rankingProcesado.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA)
     const marcasUnicas = [...new Set(ranking.map(r => r.vehiculo.marca))].sort()
+    const aniosUnicos = [...new Set(ranking.map(r => r.vehiculo.anio))].sort((a, b) => b - a)
 
-    const hayFiltros = filtroTipo || filtroMarca || busqueda || filtroClasificacion || ordenPor !== "puntajeGeneral" || ordenDir !== "desc"
+    const hayFiltros = filtroTipo || filtroMarca || busqueda || filtroClasificacion || filtroAnio || ordenPor !== "puntajeGeneral" || ordenDir !== "desc"
 
     return (
         <div>
@@ -250,6 +253,11 @@ const Confiabilidad = () => {
                         value={filtroMarca} onChange={e => setFiltroMarca(e.target.value)}>
                         <option value="">Todas las marcas</option>
                         {marcasUnicas.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <select className="rounded-md border border-slate-300 py-2 px-3 text-slate-700 text-sm"
+                        value={filtroAnio} onChange={e => { setFiltroAnio(e.target.value); setPagina(1) }}>
+                        <option value="">Todos los años</option>
+                        {aniosUnicos.map(a => <option key={a} value={String(a)}>{a}</option>)}
                     </select>
                 </div>
                 <div className="flex flex-wrap gap-3 items-center">
@@ -290,7 +298,7 @@ const Confiabilidad = () => {
                     </div>
                     {hayFiltros && (
                         <button type="button"
-                            onClick={() => { setFiltroTipo(""); setFiltroMarca(""); setBusqueda(""); setOrdenPor("puntajeGeneral"); setOrdenDir("desc"); setFiltroClasificacion(""); setPagina(1) }}
+                            onClick={() => { setFiltroTipo(""); setFiltroMarca(""); setBusqueda(""); setOrdenPor("puntajeGeneral"); setOrdenDir("desc"); setFiltroClasificacion(""); setFiltroAnio(""); setPagina(1) }}
                             className="text-sm text-slate-500 hover:underline ml-auto">
                             Limpiar filtros
                         </button>

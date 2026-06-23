@@ -129,12 +129,19 @@ const VerReportes = () => {
 
             {vehiculoFiltroId && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4 flex items-center justify-between gap-3">
-                    <p className="text-sm text-blue-800">
-                        Mostrando reportes de: <strong>{vehiculoNombre || "vehículo seleccionado"}</strong>
-                    </p>
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button type="button" onClick={() => navigate("/dashboard/vehiculos")}
+                            className="text-blue-700 hover:underline text-sm font-semibold shrink-0">
+                            ← Vehículos
+                        </button>
+                        <span className="text-slate-300 shrink-0">|</span>
+                        <p className="text-sm text-blue-800 truncate">
+                            <strong>{vehiculoNombre || "Vehículo seleccionado"}</strong>
+                        </p>
+                    </div>
                     <button type="button" onClick={limpiarFiltroVehiculo}
                         className="text-xs text-blue-600 hover:underline font-semibold shrink-0">
-                        Ver todos los reportes
+                        Ver todos
                     </button>
                 </div>
             )}

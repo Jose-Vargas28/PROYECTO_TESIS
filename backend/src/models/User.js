@@ -79,7 +79,10 @@ const userSchema = new Schema({
     eliminadoEn: {
         type: Date,
         default: null
-    }
+    },
+    // Bloqueo temporal por intentos fallidos de login
+    intentosFallidos: { type: Number, default: 0 },
+    bloqueadoHasta:   { type: Date,   default: null }
 }, {
     timestamps: true
 })

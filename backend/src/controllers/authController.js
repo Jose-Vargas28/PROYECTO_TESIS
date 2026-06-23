@@ -5,7 +5,7 @@ import { sendMailToConfirm, sendMailToRecovery } from "../config/nodemailer.js"
 // REGISTRO
 export const registro = async (req, res) => {
     try {
-        const { nombre, apellido, email, password } = req.body
+        const { nombre, apellido, email, password, telefono, region, provincia } = req.body
 
         if (!nombre || !apellido || !email || !password) {
             return res.status(400).json({ msg: "Todos los campos son obligatorios" })
@@ -21,12 +21,21 @@ export const registro = async (req, res) => {
             return res.status(400).json({ msg: "La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial" })
         }
 
+        if (telefono && !/^09\d{8}$/.test(telefono)) {
+            return res.status(400).json({ msg: "El teléfono debe tener el formato 09XXXXXXXX (10 dígitos)" })
+        }
+
         const existe = await User.findOne({ email })
         if (existe) {
             return res.status(400).json({ msg: "El correo ya está registrado" })
         }
 
-        const nuevoUser = new User({ nombre, apellido, email, password })
+        const nuevoUser = new User({
+            nombre, apellido, email, password,
+            ...(telefono  && { telefono }),
+            ...(region    && { region }),
+            ...(provincia && { provincia }),
+        })
         nuevoUser.password = await nuevoUser.encryptPassword(password)
         const token = nuevoUser.crearToken()
 
@@ -88,10 +97,44 @@ export const login = async (req, res) => {
             return res.status(400).json({ msg: "Esta cuenta se creó con Google. Inicia sesión con el botón 'Continuar con Google'." })
         }
 
+        // Verificar bloqueo temporal por intentos fallidos (solo usuarios normales)
+        if (user.rol !== "admin" && user.bloqueadoHasta && user.bloqueadoHasta > new Date()) {
+            const minutosRestantes = Math.ceil((user.bloqueadoHasta - new Date()) / 60000)
+            return res.status(429).json({
+                msg: `Cuenta bloqueada temporalmente por demasiados intentos fallidos. Intenta nuevamente en ${minutosRestantes} minuto${minutosRestantes !== 1 ? "s" : ""}.`
+            })
+        }
+
         const valido = await user.matchPassword(password)
         if (!valido) {
+            // Solo aplicar conteo de intentos a usuarios normales
+            if (user.rol !== "admin") {
+                const intentos = (user.intentosFallidos || 0) + 1
+                const MAX_INTENTOS = 5
+                const BLOQUEO_MS = 15 * 60 * 1000
+
+                if (intentos >= MAX_INTENTOS) {
+                    await User.findByIdAndUpdate(user._id, {
+                        intentosFallidos: intentos,
+                        bloqueadoHasta: new Date(Date.now() + BLOQUEO_MS)
+                    })
+                    return res.status(429).json({
+                        msg: `Has superado el límite de ${MAX_INTENTOS} intentos. Tu cuenta ha sido bloqueada 15 minutos por seguridad.`
+                    })
+                }
+
+                await User.findByIdAndUpdate(user._id, { intentosFallidos: intentos })
+                const restantes = MAX_INTENTOS - intentos
+                return res.status(401).json({
+                    msg: `Contraseña incorrecta. Te ${restantes === 1 ? "queda" : "quedan"} ${restantes} intento${restantes !== 1 ? "s" : ""} antes del bloqueo temporal.`
+                })
+            }
+
             return res.status(401).json({ msg: "Contraseña incorrecta" })
         }
+
+        // Login exitoso — resetear contadores
+        await User.findByIdAndUpdate(user._id, { intentosFallidos: 0, bloqueadoHasta: null })
 
         const token = crearTokenJWT(user._id, user.rol)
 

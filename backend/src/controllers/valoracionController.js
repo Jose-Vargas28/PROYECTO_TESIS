@@ -195,12 +195,12 @@ export const obtenerValoracionesVehiculo = async (req, res) => {
         const skip = (pagina - 1) * limite
 
         const vehiculo = await Vehiculo.findById(vehiculoId)
-            .select("marca modelo anio tipo combustible fotos version enlaces ocultarFotoAuto")
+            .select("marca modelo anio tipo combustible fotos version enlaces ocultarFotoAuto transmision traccion potencia torque airbags peso turbo cilindraje cilindros")
         if (!vehiculo) return res.status(404).json({ msg: "Vehículo no encontrado" })
 
         const total = await Valoracion.countDocuments({ vehiculo: vehiculoId, activo: { $ne: false } })
         const valoraciones = await Valoracion.find({ vehiculo: vehiculoId, activo: { $ne: false } })
-            .populate("usuario", "nombre region provincia")
+            .populate("usuario", "nombre apellido region provincia")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limite)
@@ -369,7 +369,7 @@ export const listarTodasValoraciones = async (req, res) => {
         if (estado === "eliminado") filtro.activo = false
 
         let valoraciones = await Valoracion.find(filtro)
-            .populate("usuario", "nombre email")
+            .populate("usuario", "nombre apellido email")
             .populate("vehiculo", "marca modelo anio version")
             .sort({ createdAt: -1 })
 

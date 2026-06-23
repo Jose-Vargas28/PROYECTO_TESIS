@@ -88,6 +88,17 @@ export const listarVehiculos = async (req, res) => {
         if (tipo) filtro.tipo = tipo
         if (marca) filtro.marca = { $regex: `^${marca}$`, $options: "i" }
 
+        const transmision = req.query.transmision || ""
+        const traccion    = req.query.traccion    || ""
+        const combustible = req.query.combustible || ""
+        const turbo       = req.query.turbo       || ""
+
+        if (transmision) filtro.transmision = transmision
+        if (traccion)    filtro.traccion    = traccion
+        if (combustible) filtro.combustible = combustible
+        if (turbo === "true")  filtro.turbo = true
+        if (turbo === "false") filtro.turbo = false
+
         const total = await Vehiculo.countDocuments(filtro)
         const vehiculos = await Vehiculo.find(filtro)
             .populate("creadoPor", "nombre")
@@ -97,7 +108,7 @@ export const listarVehiculos = async (req, res) => {
 
         const vehiculosConStats = await Promise.all(vehiculos.map(async (v) => {
             const obj = v.toObject()
-            obj.totalReportes = await Reporte.countDocuments({ vehiculo: v._id, activo: true })
+            obj.totalReportes = await Reporte.countDocuments({ vehiculo: v._id, activo: true, validado: true })
             return obj
         }))
 
@@ -164,7 +175,24 @@ export const actualizarVehiculo = async (req, res) => {
 
         const tipo = req.body.tipo || "automóvil"
         const combustible = req.body.combustible || "gasolina"
-        await Vehiculo.findByIdAndUpdate(req.params.id, { marca, modelo, anio, version, tipo, combustible }, { new: true })
+
+        // Campos técnicos opcionales (solo admin puede enviarlos)
+        const tecnica = {}
+        if (req.body.transmision !== undefined) tecnica.transmision = req.body.transmision || null
+        if (req.body.traccion    !== undefined) tecnica.traccion    = req.body.traccion    || null
+        if (req.body.potencia    !== undefined) tecnica.potencia    = req.body.potencia    ? Number(req.body.potencia)    : null
+        if (req.body.torque      !== undefined) tecnica.torque      = req.body.torque      ? Number(req.body.torque)      : null
+        if (req.body.airbags     !== undefined) tecnica.airbags     = req.body.airbags     ? Number(req.body.airbags)     : null
+        if (req.body.peso        !== undefined) tecnica.peso        = req.body.peso        ? Number(req.body.peso)        : null
+        if (req.body.turbo       !== undefined) tecnica.turbo       = req.body.turbo === null ? null : req.body.turbo === true || req.body.turbo === "true"
+        if (req.body.cilindraje  !== undefined) tecnica.cilindraje  = req.body.cilindraje  ? Number(req.body.cilindraje)  : null
+        if (req.body.cilindros   !== undefined) tecnica.cilindros   = req.body.cilindros   ? Number(req.body.cilindros)   : null
+
+        await Vehiculo.findByIdAndUpdate(
+            req.params.id,
+            { marca, modelo, anio, version, tipo, combustible, ...tecnica },
+            { new: true }
+        )
         res.status(200).json({ msg: "Vehículo actualizado correctamente" })
 
     } catch (error) {

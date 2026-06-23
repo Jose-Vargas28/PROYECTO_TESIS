@@ -193,6 +193,107 @@ const Lightbox = ({ fotos, indiceInicial, onCerrar }) => {
     )
 }
 
+// ---- Modal de características del vehículo ----
+const ModalCaracteristicas = ({ vehiculo, onCerrar }) => {
+    const [fotoSrc, setFotoSrc] = useState(null)
+
+    useEffect(() => {
+        const fotoPrincipal = vehiculo.fotos?.find(f => f.principal) || vehiculo.fotos?.[0]
+        if (fotoPrincipal) { setFotoSrc(fotoPrincipal.url); return }
+        if (vehiculo.ocultarFotoAuto) return
+        buscarFotoPexels(vehiculo.marca, vehiculo.modelo).then(urls => {
+            if (urls[0]) setFotoSrc(urls[0])
+        })
+    }, [vehiculo._id])
+
+    const faltanTecnicos = !vehiculo.transmision && !vehiculo.traccion &&
+        vehiculo.potencia == null && vehiculo.torque == null &&
+        vehiculo.airbags == null && vehiculo.peso == null &&
+        vehiculo.turbo == null && !vehiculo.cilindraje && !vehiculo.cilindros
+
+    const Campo = ({ label, valor, capitalize }) => (
+        <div>
+            <p className="text-xs text-slate-400 mb-0.5">{label}</p>
+            {valor !== null && valor !== undefined && valor !== ""
+                ? <p className={`text-sm font-semibold text-slate-700 ${capitalize ? "capitalize" : ""}`}>{valor}</p>
+                : <p className="text-sm font-medium text-slate-300">S/D</p>}
+        </div>
+    )
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+            onClick={onCerrar}>
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
+                onClick={e => e.stopPropagation()}>
+
+                {/* Foto principal */}
+                {fotoSrc ? (
+                    <div className="relative w-full h-44 bg-slate-100">
+                        <img src={fotoSrc} alt={`${vehiculo.marca} ${vehiculo.modelo}`}
+                            className="w-full h-full object-cover"
+                            onError={() => setFotoSrc(null)} />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    </div>
+                ) : (
+                    <div className="w-full h-28 bg-slate-100 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 17H3a2 2 0 01-2-2v-4a2 2 0 012-2h1l2-4h10l2 4h1a2 2 0 012 2v4a2 2 0 01-2 2h-2m-7 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                        </svg>
+                    </div>
+                )}
+
+                {/* Header: logo grande + nombre + botón cerrar */}
+                <div className="px-5 pt-4 pb-3 flex items-center gap-4 border-b border-slate-100">
+                    <LogoMarca marca={vehiculo.marca} size={52} />
+                    <div className="flex-1 min-w-0">
+                        <h2 className="text-xl font-bold text-slate-800 leading-tight truncate">
+                            {vehiculo.marca} {vehiculo.modelo}
+                        </h2>
+                        <p className="text-sm text-slate-500 mt-0.5">
+                            {vehiculo.anio}
+                        </p>
+                    </div>
+                    <button type="button" onClick={onCerrar}
+                        className="shrink-0 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 text-2xl rounded-full hover:bg-slate-100 transition-colors leading-none">
+                        ×
+                    </button>
+                </div>
+
+                {/* Ficha técnica */}
+                <div className="px-5 py-4">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Ficha técnica</p>
+                    <div className="grid grid-cols-3 gap-x-4 gap-y-3">
+                        <Campo label="Tipo"        valor={vehiculo.tipo}        capitalize />
+                        <Campo label="Combustible" valor={vehiculo.combustible} capitalize />
+                        <Campo label="Versión"     valor={vehiculo.version || null} />
+                        <Campo label="Transmisión" valor={vehiculo.transmision || null} capitalize />
+                        <Campo label="Tracción"    valor={vehiculo.traccion || null} />
+                        <Campo label="Cilindraje"  valor={vehiculo.cilindraje != null ? `${vehiculo.cilindraje} cc` : null} />
+                        <Campo label="Cilindros"   valor={vehiculo.cilindros  != null ? vehiculo.cilindros : null} />
+                        <Campo label="Potencia"    valor={vehiculo.potencia != null ? `${vehiculo.potencia} HP` : null} />
+                        <Campo label="Torque"      valor={vehiculo.torque != null ? `${vehiculo.torque} Nm` : null} />
+                        <div>
+                            <p className="text-xs text-slate-400 mb-0.5">Turbo</p>
+                            {vehiculo.turbo === true
+                                ? <p className="text-sm font-semibold text-green-600">✓ Sí</p>
+                                : vehiculo.turbo === false
+                                    ? <p className="text-sm font-semibold text-slate-700">No</p>
+                                    : <p className="text-sm font-medium text-slate-300">S/D</p>}
+                        </div>
+                        <Campo label="Peso"        valor={vehiculo.peso != null ? `${vehiculo.peso} kg` : null} />
+                        <Campo label="Airbags"     valor={vehiculo.airbags != null ? vehiculo.airbags : null} />
+                    </div>
+                    {faltanTecnicos && (
+                        <p className="text-xs text-slate-400 italic mt-3 pt-3 border-t border-slate-100">
+                            Los datos técnicos serán completados por la administración.
+                        </p>
+                    )}
+                </div>
+            </div>
+        </div>
+    )
+}
+
 const TIPOS_VEHICULO = ["automóvil", "suv", "camioneta", "moto", "vehículo comercial"]
 
 // ---- Página principal ----
@@ -221,11 +322,16 @@ const CatalogoVehiculos = () => {
     const [modalEliminarFoto, setModalEliminarFoto] = useState(null)
     const inputFotoRef = useRef(null)
     const [modalAdvertenciaValorar, setModalAdvertenciaValorar] = useState(null)
+    const [modalCaracteristicas, setModalCaracteristicas] = useState(null)
+    const [filtroTransmision, setFiltroTransmision] = useState("")
+    const [filtroTraccion, setFiltroTraccion] = useState("")
+    const [filtroCombustible, setFiltroCombustible] = useState("")
+    const [filtroTurbo, setFiltroTurbo] = useState("")
 
-    const cargar = useCallback(async (pag = 1, busq = "", tipo = "", marca = "") => {
+    const cargar = useCallback(async (pag = 1, busq = "", tipo = "", marca = "", extras = {}) => {
         setCargando(true)
         try {
-            const res = await getVehiculos(pag, busq, tipo, marca)
+            const res = await getVehiculos(pag, busq, tipo, marca, 10, extras)
             const lista = res.data.vehiculos || []
             setVehiculos(lista)
             setTotalPaginas(res.data.paginas || 1)
@@ -247,14 +353,16 @@ const CatalogoVehiculos = () => {
 
     // Debounce en búsqueda
     useEffect(() => {
-        const t = setTimeout(() => { setPagina(1); cargar(1, busqueda, filtroTipo, filtroMarca) }, 400)
+        const extras = { transmision: filtroTransmision, traccion: filtroTraccion, combustible: filtroCombustible, turbo: filtroTurbo }
+        const t = setTimeout(() => { setPagina(1); cargar(1, busqueda, filtroTipo, filtroMarca, extras) }, 400)
         return () => clearTimeout(t)
     }, [busqueda])
 
     // Filtros inmediatos
     useEffect(() => {
-        setPagina(1); cargar(1, busqueda, filtroTipo, filtroMarca)
-    }, [filtroTipo, filtroMarca])
+        const extras = { transmision: filtroTransmision, traccion: filtroTraccion, combustible: filtroCombustible, turbo: filtroTurbo }
+        setPagina(1); cargar(1, busqueda, filtroTipo, filtroMarca, extras)
+    }, [filtroTipo, filtroMarca, filtroTransmision, filtroTraccion, filtroCombustible, filtroTurbo])
 
     // Ordenamiento en frontend (los datos ya vienen filtrados del backend)
     const vehiculosOrdenados = [...vehiculos]
@@ -272,7 +380,7 @@ const CatalogoVehiculos = () => {
             return 0
         })
 
-    const hayFiltros = filtroTipo || filtroMarca || busqueda || ordenPor !== "marca" || filtroReportes
+    const hayFiltros = filtroTipo || filtroMarca || busqueda || ordenPor !== "marca" || filtroReportes || filtroTransmision || filtroTraccion || filtroCombustible || filtroTurbo
     const cambiarPagina = (p) => { setPagina(p); cargar(p, busqueda, filtroTipo, filtroMarca) }
     const abrirGestionFotos = async (v) => {
         setVehiculoFotos({ ...v })
@@ -409,6 +517,47 @@ const CatalogoVehiculos = () => {
                         {marcasDisponibles.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                 </div>
+                {/* Fila 3 — filtros técnicos */}
+                <div className="flex flex-wrap gap-3 items-center">
+                    <select className="rounded-md border border-slate-300 py-2 px-3 text-slate-700 text-sm"
+                        value={filtroCombustible} onChange={e => setFiltroCombustible(e.target.value)}>
+                        <option value="">Combustible</option>
+                        <option value="gasolina">Gasolina</option>
+                        <option value="diésel">Diésel</option>
+                        <option value="híbrido">Híbrido</option>
+                        <option value="eléctrico">Eléctrico</option>
+                    </select>
+                    <select className="rounded-md border border-slate-300 py-2 px-3 text-slate-700 text-sm"
+                        value={filtroTransmision} onChange={e => setFiltroTransmision(e.target.value)}>
+                        <option value="">Transmisión</option>
+                        <option value="manual">Manual</option>
+                        <option value="automática">Automática</option>
+                        <option value="automática doble embrague">Doble embrague</option>
+                        <option value="CVT">CVT</option>
+                        <option value="e-CVT">e-CVT</option>
+                        <option value="semi-automática">Semi-automática</option>
+                        <option value="directa">Directa (eléctrico)</option>
+                    </select>
+                    <select className="rounded-md border border-slate-300 py-2 px-3 text-slate-700 text-sm"
+                        value={filtroTraccion} onChange={e => setFiltroTraccion(e.target.value)}>
+                        <option value="">Tracción</option>
+                        <option value="FWD">FWD — Delantera</option>
+                        <option value="RWD">RWD — Trasera</option>
+                        <option value="AWD">AWD — Total</option>
+                        <option value="4WD">4WD — Cuatro ruedas</option>
+                    </select>
+                    <select className="rounded-md border border-slate-300 py-2 px-3 text-slate-700 text-sm"
+                        value={filtroTurbo} onChange={e => setFiltroTurbo(e.target.value)}>
+                        <option value="">Turbo</option>
+                        <option value="true">Con turbo</option>
+                        <option value="false">Sin turbo</option>
+                    </select>
+                    {(filtroTransmision || filtroTraccion || filtroCombustible || filtroTurbo) && (
+                        <p className="text-xs text-slate-400 italic w-full">
+                            Los vehículos sin datos en el campo seleccionado no aparecerán en los resultados.
+                        </p>
+                    )}
+                </div>
                 {/* Fila 2 — ordenamiento y clasificación rápida */}
                 <div className="flex flex-wrap gap-3 items-center">
                     <div className="flex items-center gap-2">
@@ -444,7 +593,7 @@ const CatalogoVehiculos = () => {
                     </div>
                     {hayFiltros && (
                         <button type="button"
-                            onClick={() => { setFiltroTipo(""); setFiltroMarca(""); setBusqueda(""); setOrdenPor("marca"); setFiltroReportes("") }}
+                            onClick={() => { setFiltroTipo(""); setFiltroMarca(""); setBusqueda(""); setOrdenPor("marca"); setFiltroReportes(""); setFiltroTransmision(""); setFiltroTraccion(""); setFiltroCombustible(""); setFiltroTurbo("") }}
                             className="text-sm text-slate-500 hover:underline ml-auto">
                             Limpiar filtros
                         </button>
@@ -500,17 +649,21 @@ const CatalogoVehiculos = () => {
                                                 🖼 Gestionar fotos ({v.fotos?.length || 0}/5)
                                             </button>
                                         ) : (
-                                            <div className="flex gap-1.5">
+                                            <div className="flex flex-col gap-1.5">
+                                                <button type="button"
+                                                    onClick={() => setModalCaracteristicas(v)}
+                                                    className="w-full border border-blue-900 text-blue-900 bg-white hover:bg-blue-50 text-xs font-semibold px-2 py-1.5 rounded-lg transition-colors">
+                                                    Características
+                                                </button>
                                                 <button type="button"
                                                     onClick={() => navigate(`/dashboard/reportes?vehiculo=${v._id}`)}
-                                                    className="flex-1 bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-2 py-1.5 rounded-lg transition-colors">
+                                                    className="w-full bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold px-2 py-1.5 rounded-lg transition-colors">
                                                     Ver reportes
                                                 </button>
                                                 <button type="button"
                                                     onClick={() => setModalAdvertenciaValorar(v._id)}
-                                                    title="Valorar este vehículo"
-                                                    className="shrink-0 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors">
-                                                    ⭐
+                                                    className="w-full bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold px-2 py-1.5 rounded-lg transition-colors">
+                                                    ⭐ Valorar vehículo
                                                 </button>
                                             </div>
                                         )}
@@ -712,6 +865,14 @@ const CatalogoVehiculos = () => {
                     colorBoton="bg-red-600 hover:bg-red-700"
                     onConfirmar={handleEliminarFoto}
                     onCancelar={() => setModalEliminarFoto(null)}
+                />
+            )}
+
+            {/* Modal características */}
+            {modalCaracteristicas && (
+                <ModalCaracteristicas
+                    vehiculo={modalCaracteristicas}
+                    onCerrar={() => setModalCaracteristicas(null)}
                 />
             )}
 

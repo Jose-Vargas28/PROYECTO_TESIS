@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router"
 import { useEffect, useState } from "react"
 import storeAuth from "../context/storeAuth"
 import storeProfile from "../context/storeProfile"
+import storeUI from "../context/storeUI"
 import Logo from "../components/Logo"
 import { theme } from "../config/theme"
 import ModalConfirmar from "../components/ui/ModalConfirmar"
@@ -13,7 +14,25 @@ const Dashboard = () => {
     const url = location.pathname
     const { clearAuth, rol, token } = storeAuth()
     const { user, profile, clearUser } = storeProfile()
+    const { formDirty, setFormDirty } = storeUI()
     const [modalLogout, setModalLogout] = useState(false)
+    const [modalSalir, setModalSalir] = useState(false)
+    const [pendingNav, setPendingNav] = useState(null)
+
+    const handleNavClick = (e, to) => {
+        if (formDirty && url !== to) {
+            e.preventDefault()
+            setPendingNav(to)
+            setModalSalir(true)
+        }
+    }
+
+    const confirmarSalir = () => {
+        setFormDirty(false)
+        setModalSalir(false)
+        navigate(pendingNav)
+        setPendingNav(null)
+    }
 
     useEffect(() => {
         profile()
@@ -76,9 +95,9 @@ const Dashboard = () => {
     }
 
     return (
-        <div className="md:flex md:min-h-screen bg-slate-100">
-            {/* Sidebar */}
-            <aside className="md:w-64 bg-slate-800 px-4 py-6 flex flex-col">
+        <div className="md:flex h-screen overflow-hidden bg-slate-100">
+            {/* Sidebar — fijo, scroll propio si hay muchos enlaces */}
+            <aside className="md:w-64 bg-slate-800 px-4 py-6 flex flex-col h-full overflow-y-auto shrink-0">
                 <div className="mb-8">
                     <Logo size="sm" light />
                 </div>
@@ -103,7 +122,8 @@ const Dashboard = () => {
 
                 <nav className="flex-1">
                     {enlacesUsuario.map((e) => (
-                        <Link key={e.to} to={e.to} className={linkClass(e.to, e.exact)}>
+                        <Link key={e.to} to={e.to} className={linkClass(e.to, e.exact)}
+                            onClick={(ev) => handleNavClick(ev, e.to)}>
                             {e.label}
                         </Link>
                     ))}
@@ -112,7 +132,8 @@ const Dashboard = () => {
                         <>
                             <p className="text-slate-500 text-xs uppercase mt-4 mb-2 px-4">Administración</p>
                             {enlacesAdmin.map((e) => (
-                                <Link key={e.to} to={e.to} className={linkClass(e.to)}>
+                                <Link key={e.to} to={e.to} className={linkClass(e.to)}
+                                    onClick={(ev) => handleNavClick(ev, e.to)}>
                                     {e.label}
                                 </Link>
                             ))}
@@ -129,15 +150,44 @@ const Dashboard = () => {
                 </button>
             </aside>
 
-            {/* Contenido principal */}
-            <main className="flex-1 flex flex-col">
-                <div className="flex-1 p-6 md:p-8 overflow-y-auto">
+            {/* Contenido principal — scroll propio */}
+            <main className="flex-1 flex flex-col overflow-y-auto">
+                <div className="flex-1 p-6 md:p-8">
                     <Outlet />
                 </div>
-                <footer className="bg-slate-800 text-slate-400 text-center text-sm py-3">
-                    {theme.derechos}
+                <footer className="bg-slate-800 text-slate-400 text-center text-sm py-3 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+                    <span>{theme.derechos}</span>
+                    <a href="/terminos" target="_blank" rel="noreferrer"
+                        className="text-slate-500 hover:text-slate-200 hover:underline transition-colors text-xs">
+                        Términos y condiciones
+                    </a>
                 </footer>
             </main>
+
+            {/* Modal advertencia salir del formulario */}
+            {modalSalir && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
+                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span className="text-2xl">⚠️</span>
+                        </div>
+                        <h3 className="font-bold text-slate-800 text-lg mb-2">¿Salir del formulario?</h3>
+                        <p className="text-slate-500 text-sm mb-5">
+                            Si sales ahora perderás todos los datos ingresados. El reporte no se guardará.
+                        </p>
+                        <div className="flex gap-3">
+                            <button type="button" onClick={() => { setModalSalir(false); setPendingNav(null) }}
+                                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-lg">
+                                Seguir editando
+                            </button>
+                            <button type="button" onClick={confirmarSalir}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg">
+                                Sí, salir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal confirmación cerrar sesión */}
             {modalLogout && (

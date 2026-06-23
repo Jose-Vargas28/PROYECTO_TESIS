@@ -21,8 +21,8 @@ const popReporte = (query) =>
     query
         .populate("vehiculo", "marca modelo anio tipo combustible fotos")
         .populate("falla", "nombre descripcion")
-        .populate("usuario", "nombre email region provincia")
-        .populate("validadoPor", "nombre email")
+        .populate("usuario", "nombre apellido email region provincia")
+        .populate("validadoPor", "nombre apellido email")
 
 // CREAR REPORTE
 export const crearReporte = async (req, res) => {
@@ -329,7 +329,7 @@ export const obtenerReportesEliminados = async (req, res) => {
 
         const total = await Reporte.countDocuments(filtro)
         const reportes = await popReporte(
-            Reporte.find(filtro).populate("eliminadoPor", "nombre email").sort({ eliminadoEn: -1 }).skip(skip).limit(limite)
+            Reporte.find(filtro).populate("eliminadoPor", "nombre apellido email").sort({ eliminadoEn: -1 }).skip(skip).limit(limite)
         )
 
         res.status(200).json({

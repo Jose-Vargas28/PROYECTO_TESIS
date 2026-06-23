@@ -221,11 +221,89 @@ const DetalleVehiculo = () => {
                                     {vehiculo.marca} {vehiculo.modelo} {vehiculo.anio}
                                 </h1>
                             </div>
-                            <div className="flex gap-2 mt-2 flex-wrap">
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 capitalize">{vehiculo.tipo}</span>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 capitalize">{vehiculo.combustible}</span>
-                                {vehiculo.version && (
-                                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">{vehiculo.version}</span>
+                            {/* Ficha técnica — siempre visible */}
+                            <div className="mt-4 pt-3 border-t border-slate-100">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Ficha técnica</p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+                                    {/* Fila 1: básicos */}
+                                    <div>
+                                        <p className="text-xs text-slate-400">Tipo</p>
+                                        <p className="text-sm font-semibold text-slate-700 capitalize">{vehiculo.tipo}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400">Combustible</p>
+                                        <p className="text-sm font-semibold text-slate-700 capitalize">{vehiculo.combustible}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400">Versión</p>
+                                        {vehiculo.version
+                                            ? <p className="text-sm font-semibold text-slate-700">{vehiculo.version}</p>
+                                            : <p className="text-sm text-slate-300 font-medium">S/D</p>}
+                                    </div>
+                                    {/* Fila 2: transmisión, tracción, cilindraje */}
+                                    <div>
+                                        <p className="text-xs text-slate-400">Transmisión</p>
+                                        {vehiculo.transmision
+                                            ? <p className="text-sm font-semibold text-slate-700 capitalize">{vehiculo.transmision}</p>
+                                            : <p className="text-sm text-slate-300 font-medium">S/D</p>}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400">Tracción</p>
+                                        {vehiculo.traccion
+                                            ? <p className="text-sm font-semibold text-slate-700">{vehiculo.traccion}</p>
+                                            : <p className="text-sm text-slate-300 font-medium">S/D</p>}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400">Cilindraje</p>
+                                        {vehiculo.cilindraje
+                                            ? <p className="text-sm font-semibold text-slate-700">{vehiculo.cilindraje} cc</p>
+                                            : <p className="text-sm text-slate-300 font-medium">S/D</p>}
+                                    </div>
+                                    {/* Fila 3: cilindros, potencia, torque */}
+                                    <div>
+                                        <p className="text-xs text-slate-400">Cilindros</p>
+                                        {vehiculo.cilindros
+                                            ? <p className="text-sm font-semibold text-slate-700">{vehiculo.cilindros}</p>
+                                            : <p className="text-sm text-slate-300 font-medium">S/D</p>}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400">Potencia</p>
+                                        {vehiculo.potencia
+                                            ? <p className="text-sm font-semibold text-slate-700">{vehiculo.potencia} HP</p>
+                                            : <p className="text-sm text-slate-300 font-medium">S/D</p>}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400">Torque</p>
+                                        {vehiculo.torque
+                                            ? <p className="text-sm font-semibold text-slate-700">{vehiculo.torque} Nm</p>
+                                            : <p className="text-sm text-slate-300 font-medium">S/D</p>}
+                                    </div>
+                                    {/* Fila 4: turbo, peso, airbags */}
+                                    <div>
+                                        <p className="text-xs text-slate-400">Turbo</p>
+                                        {vehiculo.turbo === true
+                                            ? <p className="text-sm font-semibold text-green-600">✓ Sí</p>
+                                            : vehiculo.turbo === false
+                                                ? <p className="text-sm font-semibold text-slate-700">No</p>
+                                                : <p className="text-sm text-slate-300 font-medium">S/D</p>}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400">Peso</p>
+                                        {vehiculo.peso
+                                            ? <p className="text-sm font-semibold text-slate-700">{vehiculo.peso} kg</p>
+                                            : <p className="text-sm text-slate-300 font-medium">S/D</p>}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400">Airbags</p>
+                                        {vehiculo.airbags != null && vehiculo.airbags !== ""
+                                            ? <p className="text-sm font-semibold text-slate-700">{vehiculo.airbags}</p>
+                                            : <p className="text-sm text-slate-300 font-medium">S/D</p>}
+                                    </div>
+                                </div>
+                                {(!vehiculo.transmision && !vehiculo.traccion && !vehiculo.potencia && !vehiculo.torque && vehiculo.airbags == null && !vehiculo.peso && vehiculo.turbo == null && !vehiculo.cilindraje && !vehiculo.cilindros) && (
+                                    <p className="text-xs text-slate-400 italic mt-3">
+                                        Los datos técnicos serán completados por la administración.
+                                    </p>
                                 )}
                             </div>
                         </div>
@@ -458,7 +536,7 @@ const DetalleVehiculo = () => {
             {total > 0 && (
                 <div className="bg-white rounded-xl shadow-lg p-6">
                     <h2 className="text-lg font-bold text-slate-700 mb-4">Reseñas de usuarios ({total})</h2>
-                    <div className="space-y-4">
+                    <div className="max-h-[480px] overflow-y-auto pr-1 space-y-4">
                         {valoraciones.map(v => (
                             <div key={v._id} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
                                 <div className="flex items-start justify-between gap-2 mb-2">
@@ -494,8 +572,10 @@ const DetalleVehiculo = () => {
                         ))}
                     </div>
                     {paginas > 1 && (
-                        <Paginacion paginaActual={pagina} totalPaginas={paginas}
-                            onCambiar={p => { setPagina(p); cargar(p) }} />
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                            <Paginacion paginaActual={pagina} totalPaginas={paginas}
+                                onCambiar={p => { setPagina(p); cargar(p) }} />
+                        </div>
                     )}
                 </div>
             )}

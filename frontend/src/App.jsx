@@ -8,6 +8,7 @@ import Confirm from "./pages/Confirm"
 import Forgot from "./pages/Forgot"
 import Reset from "./pages/Reset"
 import NotFound from "./pages/NotFound"
+import Terminos from "./pages/Terminos"
 
 // Layout y páginas del dashboard
 import Dashboard from "./layout/Dashboard"
@@ -48,6 +49,9 @@ function App() {
                     <Route path="forgot" element={<Forgot />} />
                     <Route path="reset/:token" element={<Reset />} />
                 </Route>
+
+                {/* Accesible para todos (logueados o no) */}
+                <Route path="terminos" element={<Terminos />} />
 
                 {/* Dashboard (requiere login) */}
                 <Route

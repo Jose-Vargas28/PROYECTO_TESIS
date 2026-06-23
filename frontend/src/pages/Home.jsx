@@ -6,12 +6,12 @@ import { theme } from "../config/theme"
 import { getEstadisticasHome } from "../services/reporteService"
 import { getRanking } from "../services/valoracionService"
 
-
+// =============================================================
 //  ÍCONOS DE REDES SOCIALES (footer)
 //  Mismo patrón que en Logo.jsx: cuando tengas los logos reales,
 //  colócalos en src/assets/ y descomenta las líneas de abajo
 //  (una por cada red que vayas a usar).
-
+// =============================================================
 // import facebookImg from "../assets/facebook.png"
 // import instagramImg from "../assets/instagram.png"
 // import xImg from "../assets/x.png"
@@ -337,7 +337,13 @@ const Home = () => {
                 <div className="container mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <Logo size="sm" light />
 
-                    <p className="text-xs text-slate-500 order-last sm:order-none">{theme.derechos}</p>
+                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 order-last sm:order-none">
+                        <p className="text-xs text-slate-500">{theme.derechos}</p>
+                        <a href="/terminos" target="_blank" rel="noreferrer"
+                            className="text-xs text-slate-400 hover:text-slate-200 hover:underline transition-colors">
+                            Términos y condiciones
+                        </a>
+                    </div>
 
                     {/*
                         TODO: cuando tengas los logos reales, descomenta los imports de arriba

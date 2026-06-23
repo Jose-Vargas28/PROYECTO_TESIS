@@ -1,7 +1,7 @@
 import axios from "axios"
 
-//  SERVICIO DE CATÁLOGOS (Vehículos y Fallas)
 
+//  SERVICIO DE CATÁLOGOS (Vehículos y Fallas)
 
 const API = import.meta.env.VITE_BACKEND_URL
 
@@ -25,11 +25,15 @@ const authHeadersMultipart = () => {
 }
 
 // ---- Vehículos ----
-export const getVehiculos = (pagina = 1, busqueda = "", tipo = "", marca = "", limite = 10) => {
+export const getVehiculos = (pagina = 1, busqueda = "", tipo = "", marca = "", limite = 10, extras = {}) => {
     const params = new URLSearchParams({ pagina, limite })
-    if (busqueda) params.append("busqueda", busqueda)
-    if (tipo) params.append("tipo", tipo)
-    if (marca) params.append("marca", marca)
+    if (busqueda)            params.append("busqueda",    busqueda)
+    if (tipo)                params.append("tipo",        tipo)
+    if (marca)               params.append("marca",       marca)
+    if (extras.transmision)  params.append("transmision", extras.transmision)
+    if (extras.traccion)     params.append("traccion",    extras.traccion)
+    if (extras.combustible)  params.append("combustible", extras.combustible)
+    if (extras.turbo !== undefined && extras.turbo !== "") params.append("turbo", extras.turbo)
     return axios.get(`${API}/vehiculos?${params}`)
 }
 export const crearVehiculo = (data) => axios.post(`${API}/vehiculos`, data, authHeaders())

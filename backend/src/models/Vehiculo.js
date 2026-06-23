@@ -49,7 +49,26 @@ const vehiculoSchema = new Schema({
     creadoPor: {
         type: Schema.Types.ObjectId,
         ref: "User"
-    }
+    },
+
+    // Características técnicas (editables solo por admin)
+    transmision: {
+        type: String,
+        enum: ["manual", "automática", "automática doble embrague", "CVT", "e-CVT", "semi-automática", "directa"],
+        default: null
+    },
+    traccion: {
+        type: String,
+        enum: ["delantera", "trasera", "4x4", "AWD"],
+        default: null
+    },
+    potencia:    { type: Number, default: null },   // HP / caballos de fuerza
+    torque:      { type: Number, default: null },   // Nm
+    airbags:     { type: Number, default: null },   // cantidad
+    peso:        { type: Number, default: null },   // kg
+    turbo:       { type: Boolean, default: null },  // true=turbo, false=aspiración natural, null=sin datos
+    cilindraje:  { type: Number, default: null },   // cc
+    cilindros:   { type: Number, default: null },   // número de cilindros
 }, {
     timestamps: true
 })

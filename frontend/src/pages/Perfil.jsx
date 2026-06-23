@@ -24,7 +24,7 @@ const Perfil = () => {
     const [confirmarEliminarFoto, setConfirmarEliminarFoto] = useState(false)
     const inputFotoRef = useRef(null)
 
-    const { register: regPerfil, handleSubmit: hsPerfil, reset: resetPerfil, formState: { errors: errPerfil }, watch } = useForm()
+    const { register: regPerfil, handleSubmit: hsPerfil, reset: resetPerfil, setValue: setValPerfil, formState: { errors: errPerfil }, watch } = useForm()
     const { register: regPass, handleSubmit: hsPass, reset: resetPass, formState: { errors: errPass }, watch: watchPass } = useForm()
 
     const regionWatch = watch("region")
@@ -189,7 +189,8 @@ const Perfil = () => {
                                 <label className={labelClass}>Nombre</label>
                                 <input className={inputClass} {...regPerfil("nombre", {
                                     required: "El nombre es obligatorio",
-                                    pattern: { value: /^[A-Za-zÁÉÍÓÚÑÜáéíóúñü\s]+$/, message: "El nombre solo puede contener letras" }
+                                    pattern: { value: /^[A-Za-zÁÉÍÓÚÑÜáéíóúñü\s]+$/, message: "El nombre solo puede contener letras" },
+                                    onChange: (e) => setValPerfil("nombre", e.target.value.replace(/(?:^|\s)\S/g, l => l.toUpperCase()))
                                 })} />
                                 {errPerfil.nombre && <p className="text-red-700 text-sm mt-1">{errPerfil.nombre.message}</p>}
                             </div>
@@ -197,7 +198,8 @@ const Perfil = () => {
                                 <label className={labelClass}>Apellido</label>
                                 <input className={inputClass} {...regPerfil("apellido", {
                                     required: "El apellido es obligatorio",
-                                    pattern: { value: /^[A-Za-zÁÉÍÓÚÑÜáéíóúñü\s]+$/, message: "El apellido solo puede contener letras" }
+                                    pattern: { value: /^[A-Za-zÁÉÍÓÚÑÜáéíóúñü\s]+$/, message: "El apellido solo puede contener letras" },
+                                    onChange: (e) => setValPerfil("apellido", e.target.value.replace(/(?:^|\s)\S/g, l => l.toUpperCase()))
                                 })} />
                                 {errPerfil.apellido && <p className="text-red-700 text-sm mt-1">{errPerfil.apellido.message}</p>}
                             </div>
@@ -206,10 +208,16 @@ const Perfil = () => {
                                 <input type="email" className={inputClass} {...regPerfil("email", { required: "El correo es obligatorio" })} />
                                 {errPerfil.email && <p className="text-red-700 text-sm mt-1">{errPerfil.email.message}</p>}
                             </div>
+                            <div className="md:col-span-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                <p className="text-xs text-amber-800 font-semibold mb-0.5">📍 Datos opcionales</p>
+                                <p className="text-xs text-amber-700">
+                                    Tu teléfono y ubicación nos permiten contextualizar mejor los reportes por región del Ecuador y mejorar el análisis colaborativo de fallas vehiculares.
+                                </p>
+                            </div>
                             <div>
                                 <label className={labelClass}>Teléfono <span className="text-slate-400 font-normal">(opcional)</span></label>
-                                <input type="tel" className={inputClass} placeholder="0999999999" {...regPerfil("telefono", {
-                                    validate: (value) => !value || /^\d{10}$/.test(value) || "El celular debe tener exactamente 10 dígitos, sin letras ni espacios"
+                                <input type="tel" className={inputClass} placeholder="09XXXXXXXX" maxLength={10} {...regPerfil("telefono", {
+                                    pattern: { value: /^09\d{8}$/, message: "Debe tener el formato 09XXXXXXXX (10 dígitos)" }
                                 })} />
                                 {errPerfil.telefono && <p className="text-red-700 text-sm mt-1">{errPerfil.telefono.message}</p>}
                             </div>
